@@ -29,9 +29,8 @@ uniform vec4 bbox_min;
 uniform vec4 bbox_max;
 
 // Variáveis para acesso das imagens de textura
-uniform sampler2D TextureImage0;
-uniform sampler2D TextureImage1;
-uniform sampler2D TextureImage2;
+uniform sampler2D TextureImage[16]; // 15 bolas + 1 opcional
+
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -70,23 +69,46 @@ void main()
 
 vec3 Kd0;
 
-if (object_id == SPHERE)
-{
-    Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
+if (object_id == SPHERE){
+    vec3 bbox_center = ((bbox_min + bbox_max) * 0.5).xyz;
+    vec3 p = position_model.xyz;
+
+    vec3 p_rel = p - bbox_center;
+
+    // p_rep eh o ponto relativo ao centro da esfera
+    // e rho eh o raio da esfera
+    float rho = length(p_rel);
+
+    // usamos o ponto relativo e o raio para determinar os angulos phi e theta
+    // fazendo a inversa da fórmula aprendida em aula:
+    // 𝐩𝑥 = 𝜌 cos𝜑 sin 𝜃
+    // 𝐩𝑦 = 𝜌 sin 𝜑
+    // 𝐩𝑧 = 𝜌 cos𝜑 cos 𝜃
+
+    // 𝐩𝑦 = 𝜌 sin 𝜑 -> 𝜑 = asin( 𝐩𝑦 / 𝜌 )
+    float phi = asin(p_rel.y / rho);
+
+    // cálculo de θ usando a função atan2 para obter o ângulo correto no plano xz
+    float theta = atan(p_rel.x, p_rel.z);
+
+    U = 0.5 + theta / (2.0 * M_PI);
+    V = 0.5 + phi / M_PI;
+        
+    Kd0 = texture(TextureImage[15], vec2(U,V)).rgb;
 }
 else if (object_id == TABLE)
 {
-    Kd0 = texture(TextureImage0, texcoords).rgb;
+    Kd0 = texture(TextureImage[0], texcoords).rgb;
 }
 else // bunny ou outros
 {
-    Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
+    Kd0 = texture(TextureImage[0], vec2(U,V)).rgb;
 }
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
     //vec3 Kd0 = texture(TextureImage3, vec2(U,V)).rgb;
 
     // Leitura das luzes noturnas
-    vec3 cityLights = texture(TextureImage1, vec2(U,V)).rgb;
+    //vec3 cityLights = texture(TextureImage1, vec2(U,V)).rgb;
 
     // Equação de Iluminação
     float lambert = max(0,dot(n,l));

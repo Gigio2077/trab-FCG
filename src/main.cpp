@@ -241,6 +241,13 @@ int main(int argc, char* argv[])
 
     // Carregamos duas imagens para serem utilizadas como textura
     LoadTextureImage("../../data/10523_Pool_Table_v1_Diffuse.jpg"); 
+    
+    //Carregar as texturas das 15 bolas
+    for (int i = 1; i < 16; i++)
+    {
+        std::string filename = "../../data/balls_textures/" + std::to_string(i) + ".jpg";
+        LoadTextureImage(filename.c_str()); 
+    }
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
     ObjModel spheremodel("../../data/sphere.obj");
@@ -273,6 +280,35 @@ int main(int argc, char* argv[])
     glFrontFace(GL_CCW);
 
     PrintObjModelInfo(&planemodel);
+
+    // Linhas auxiliares
+    // Linha de exemplo: de (-1,0,0) até (1,0,0)
+    float line_vertices[] = {
+        -1.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f
+    };
+
+    GLuint lineVAO, lineVBO;
+    glGenVertexArrays(1, &lineVAO);
+    glGenBuffers(1, &lineVBO);
+
+    glBindVertexArray(lineVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
+
+    // Supondo que o layout location 0 seja a posição (vec3 a_position no vertex shader)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(0);
+    //
+
+
+
+    GLint maxTextures;
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTextures);
+    printf("\n\n\nLimite máximo de texturas: %d \n ", maxTextures);
+
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
@@ -317,6 +353,7 @@ int main(int argc, char* argv[])
         // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
 
+
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
@@ -345,6 +382,21 @@ int main(int argc, char* argv[])
 
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
 
+        // linhas auxiliares
+        // Linha vermelha, com identidade como model matrix
+        glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+
+        // Envie uma cor vermelha diretamente ao seu shader (se seu shader aceitar cor por uniforme)
+        glUniform1i(g_object_id_uniform, 999); // Use um ID que seu fragment shader trate como "linha vermelha"
+
+        glBindVertexArray(lineVAO);
+        glDrawArrays(GL_LINES, 0, 2);
+        glBindVertexArray(0);
+        //
+
+
+
+
         // Enviamos as matrizes "view" e "projection" para a placa de vídeo
         // (GPU). Veja o arquivo "shader_vertex.glsl", onde estas são
         // efetivamente aplicadas em todos os pontos.
@@ -354,7 +406,7 @@ int main(int argc, char* argv[])
         #define SPHERE 0
         #define PLANE  1
         #define TABLE  2
-
+        glDrawArrays(GL_LINES,0,2);
         // Desenhamos o modelo do plano
         model = Matrix_Translate(0.0f,-1.0f,0.0f)
               * Matrix_Rotate_Z(g_AngleZ)
@@ -372,6 +424,23 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, TABLE);
         DrawVirtualObject("10523_Pool_Table_v1_SG");
+
+        
+        // Desenhamos as bolas (vai ter que ter um loop)
+        model = Matrix_Translate(0.0f, 0.2f, 0.0f)
+        * Matrix_Scale(0.05f, 0.05f, 0.05f)
+        * Matrix_Rotate_X(-M_PI/2.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, SPHERE);
+        DrawVirtualObject("the_sphere");
+
+        // Desenhamos as bolas (vai ter que ter um loop)
+        model = Matrix_Translate(0.2f, 0.2f, 0.3f)
+        * Matrix_Scale(0.05f, 0.05f, 0.05f)
+        * Matrix_Rotate_X(-M_PI/2.0f);
+        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, SPHERE);
+        DrawVirtualObject("the_sphere");        
 
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
@@ -540,9 +609,16 @@ void LoadShadersFromFiles()
 
     // Variáveis em "shader_fragment.glsl" para acesso das imagens de textura
     glUseProgram(g_GpuProgramID);
-    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage0"), 0);
-    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage1"), 1);
-    glUniform1i(glGetUniformLocation(g_GpuProgramID, "TextureImage2"), 2);
+
+    for (int i = 0; i < 16; ++i)
+    {
+        std::string name = "TextureImage[" + std::to_string(i) + "]";
+        GLint loc = glGetUniformLocation(g_GpuProgramID, name.c_str());
+        glUniform1i(loc, i); // GL_TEXTUREi
+    }
+
+
+
     glUseProgram(0);
 }
 
