@@ -94,44 +94,38 @@ if (object_id == SPHERE){
     U = 0.5 + theta / (2.0 * M_PI);
     V = 0.5 + phi / M_PI;
         
-    Kd0 = texture(TextureImage[15], vec2(U,V)).rgb;
+    Kd0 = texture(TextureImage[13], vec2(U,V)).rgb;
 }
 else if (object_id == TABLE)
 {
     Kd0 = texture(TextureImage[0], texcoords).rgb;
 }
-else // bunny ou outros
+else
 {
     Kd0 = texture(TextureImage[0], vec2(U,V)).rgb;
 }
-    // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
-    //vec3 Kd0 = texture(TextureImage3, vec2(U,V)).rgb;
+    vec3 Kd = Kd0;                // Difuso (já obtido da textura)
+    vec3 Ks = vec3(0.3);             // Especular (ajuste conforme necessário)
+    float shininess = 64.0;          // Expoente de Phong (ajuste para brilho)
 
-    // Leitura das luzes noturnas
-    //vec3 cityLights = texture(TextureImage1, vec2(U,V)).rgb;
+    // Iluminação ambiente
+    vec3 Ia = vec3(1.0);             // Intensidade da luz ambiente (branca)
+    vec3 ambient = 0.1 * Kd;         // Termo ambiente final
 
-    // Equação de Iluminação
-    float lambert = max(0,dot(n,l));
+    // Iluminação difusa (Lambert)
+    float lambert = max(dot(n, l), 0.0);
+    vec3 Id = vec3(1.0);             // Intensidade da luz difusa (branca)
+    vec3 diffuse = lambert * Kd * Id;
 
-  
-    // Pequeno termo ambiente para o dia para não ficar totalmente preto
-    float ambient = 0.01;
+    // Iluminação especular (Phong)
+    vec3 r = reflect(-l.xyz, n.xyz); // Vetor refletido
+    float spec = pow(max(dot(v.xyz, r), 0.0), shininess);
+    vec3 Is = vec3(1.0);             // Intensidade da luz especular
+    vec3 specular = Ks * spec * Is;
 
     // Cor final
-    color.rgb =  Kd0 ;
+    color.rgb = ambient + diffuse + specular;
     
-    // NOTE: Se você quiser fazer o rendering de objetos transparentes, é
-    // necessário:
-    // 1) Habilitar a operação de "blending" de OpenGL logo antes de realizar o
-    //    desenho dos objetos transparentes, com os comandos abaixo no código C++:
-    //      glEnable(GL_BLEND);
-    //      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    // 2) Realizar o desenho de todos objetos transparentes *após* ter desenhado
-    //    todos os objetos opacos; e
-    // 3) Realizar o desenho de objetos transparentes ordenados de acordo com
-    //    suas distâncias para a câmera (desenhando primeiro objetos
-    //    transparentes que estão mais longe da câmera).
-    // Alpha default = 1 = 100% opaco = 0% transparente
     color.a = 1;
 
     // Cor final com correção gamma, considerando monitor sRGB.
