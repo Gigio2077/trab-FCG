@@ -94,6 +94,8 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
+
+
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
 struct SceneObject
@@ -140,19 +142,40 @@ float g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
 float g_CameraPhi = 0.0f;   // Ângulo em relação ao eixo Y
 float g_CameraDistance = 3.5f; // Distância da câmera para a origem
 
-// Variáveis que controlam rotação do antebraço
-float g_ForearmAngleZ = 0.0f;
-float g_ForearmAngleX = 0.0f;
-
-// Variáveis que controlam translação do torso
-float g_TorsoPositionX = 0.0f;
-float g_TorsoPositionY = 0.0f;
+// Variáveis para guardar o estado da câmera fixa ao entrar no modo livre
+float g_FixedCamRestoreDistance = 3.5f; // Inicialize com um valor padrão ou o valor inicial de g_CameraDistance
+float g_FixedCamRestorePhi = 0.0f;
+float g_FixedCamRestoreTheta = 0.0f;
 
 // Variável que controla o tipo de projeção utilizada: perspectiva ou ortográfica.
 bool g_UsePerspectiveProjection = true;
 
 // Variável que controla se o texto informativo será mostrado na tela.
 bool g_ShowInfoText = true;
+
+// Variável que controla se o modo de câmera livre está ativo
+bool g_FreeLookMode = false;
+
+const int TABLE_LENGTH_CM = 213.0f;
+
+const int TABLE_WIDTH_CM = 112.0f;
+
+const int TABLE_SURFACE_HEIGHT_CM = 75.0f;
+
+const float BALL_RADIUS_CM = 2.625f;
+
+// Variáveis para a posição da câmera no modo livre
+// Inicie com valores que façam sentido para o seu cenário (ex: acima do plano da mesa)
+glm::vec4 g_FreeCameraPosition = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); 
+glm::vec4 g_FreeCameraStartPosition = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); 
+// Velocidade de movimento da câmera em cm/s (ajuste este valor para o que parecer natural)
+float g_CameraSpeed = 2.0f; // 200 cm/s = 2 metros por segundo
+
+// Flags para as teclas WASD (true se a tecla está pressionada)
+bool g_W_Pressed = false;
+bool g_A_Pressed = false;
+bool g_S_Pressed = false;
+bool g_D_Pressed = false;
 
 // Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
 GLuint g_GpuProgramID = 0;
@@ -330,21 +353,76 @@ int main(int argc, char* argv[])
         // os shaders de vértice e fragmentos).
         glUseProgram(g_GpuProgramID);
 
-        // Computamos a posição da câmera utilizando coordenadas esféricas.  As
-        // variáveis g_CameraDistance, g_CameraPhi, e g_CameraTheta são
-        // controladas pelo mouse do usuário. Veja as funções CursorPosCallback()
-        // e ScrollCallback().
-        float r = g_CameraDistance;
-        float y = r*sin(g_CameraPhi);
-        float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
-        float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
 
-        // Abaixo definimos as varáveis que efetivamente definem a câmera virtual.
-        // Veja slides 195-227 e 229-234 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
-        glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
-        glm::vec4 camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
-        glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
-        glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
+        // === CÁLCULO DE DELTATIME ===
+        static double lastFrameTime = glfwGetTime();
+        double currentFrameTime = glfwGetTime();
+        float deltaTime = (float)(currentFrameTime - lastFrameTime);
+        lastFrameTime = currentFrameTime;
+        //fprintf(stdout, "DEBUG: DeltaTime: %.4f\n", deltaTime); // <<=== VERIFICA SE DELTATIME É NÃO-ZERO
+
+
+
+        glm::vec4 camera_position_c;  // Ponto "c", centro da câmera
+        glm::vec4 camera_lookat_l;    // Ponto "l", para onde a câmera (look-at) estará sempre olhando
+        glm::vec4 camera_view_vector; // Vetor "view", sentido para onde a câmera está virada
+        glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eixo Y global)
+
+        if (g_FreeLookMode) // Se o modo de câmera livre estiver ativado
+        {
+            camera_position_c = g_FreeCameraPosition; // Usa a posição atualizada pelo WASD
+
+            // Calcula o vetor "forward" (para onde a câmera está olhando)
+            // Isso usa g_CameraPhi e g_CameraTheta que são controlados pelo mouse
+            glm::vec4 forward_dir = glm::vec4(cos(g_CameraPhi) * sin(g_CameraTheta),
+                                            sin(g_CameraPhi),
+                                            cos(g_CameraPhi) * cos(g_CameraTheta), 0.0f);
+            forward_dir = glm::normalize(forward_dir);
+
+
+              // Calcula o vetor "right" (para a direita da câmera)
+            glm::vec4 global_up = glm::vec4(0.0f,1.0f,0.0f,0.0f);
+            glm::vec4 right_dir = glm::normalize(glm::vec4(glm::cross(glm::vec3(forward_dir), glm::vec3(global_up)), 0.0f));
+            
+
+            // O ponto para onde a câmera "olha" é sua posição atual mais um pouco à frente
+            camera_lookat_l = camera_position_c + forward_dir * 1.0f; // Olhe 1 unidade à frente
+
+            // O vetor "view" da câmera é o próprio vetor 'forward_dir'.
+            camera_view_vector = forward_dir;
+
+                // === VERIFICAÇÃO DO MOVIMENTO WASD E ATUALIZAÇÃO DA POSIÇÃO ===
+            if (g_W_Pressed) {
+                g_FreeCameraPosition += forward_dir * g_CameraSpeed * deltaTime;
+                fprintf(stdout, "DEBUG: W ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
+            }
+            if (g_S_Pressed) {
+                g_FreeCameraPosition -= forward_dir * g_CameraSpeed * deltaTime;
+                fprintf(stdout, "DEBUG: S ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
+            }
+            if (g_A_Pressed) {
+                g_FreeCameraPosition -= right_dir * g_CameraSpeed * deltaTime;
+                fprintf(stdout, "DEBUG: A ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
+            }
+            if (g_D_Pressed) {
+                g_FreeCameraPosition += right_dir * g_CameraSpeed * deltaTime;
+                fprintf(stdout, "DEBUG: D ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
+            }
+
+
+
+        }
+        else // Modo de câmera normal (look-at na origem)
+        {
+            // Seu código original para a câmera look-at:
+            float r = g_CameraDistance;
+            float y = r*sin(g_CameraPhi);
+            float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
+            float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
+            camera_position_c  = glm::vec4(x,y,z,1.0f); // Ponto "c", centro da câmera
+            camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); // Ponto "l", para onde a câmera (look-at) estará sempre olhando
+            camera_view_vector = camera_lookat_l - camera_position_c; // Vetor "view", sentido para onde a câmera está virada
+        }
 
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
@@ -412,7 +490,7 @@ int main(int argc, char* argv[])
               * Matrix_Rotate_Z(g_AngleZ)
               * Matrix_Rotate_Y(g_AngleY)
               * Matrix_Rotate_X(g_AngleX)
-              * Matrix_Scale(10.0f, 5.0f, 1.0f);
+              * Matrix_Scale(10.0f, 10.0f, 1.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_plane");
@@ -1077,96 +1155,80 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     }
 }
 
-// Função callback chamada sempre que o usuário movimentar o cursor do mouse em
-// cima da janela OpenGL.
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
-    // Abaixo executamos o seguinte: caso o botão esquerdo do mouse esteja
-    // pressionado, computamos quanto que o mouse se movimento desde o último
-    // instante de tempo, e usamos esta movimentação para atualizar os
-    // parâmetros que definem a posição da câmera dentro da cena virtual.
-    // Assim, temos que o usuário consegue controlar a câmera.
+    float dx = xpos - g_LastCursorPosX;
+    float dy = ypos - g_LastCursorPosY;
 
-    if (g_LeftMouseButtonPressed)
+    // Lógica para o modo de Câmera Livre (mouse sem botão)
+    if (g_FreeLookMode)
     {
-        // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
-        float dx = xpos - g_LastCursorPosX;
-        float dy = ypos - g_LastCursorPosY;
-    
-        // Atualizamos parâmetros da câmera com os deslocamentos
         g_CameraTheta -= 0.01f*dx;
-        g_CameraPhi   += 0.01f*dy;
-    
-        // Em coordenadas esféricas, o ângulo phi deve ficar entre -pi/2 e +pi/2.
+        g_CameraPhi   -= 0.01f*dy;
+
         float phimax = 3.141592f/2;
         float phimin = -phimax;
-    
+
         if (g_CameraPhi > phimax)
             g_CameraPhi = phimax;
-    
+
         if (g_CameraPhi < phimin)
             g_CameraPhi = phimin;
-    
-        // Atualizamos as variáveis globais para armazenar a posição atual do
-        // cursor como sendo a última posição conhecida do cursor.
-        g_LastCursorPosX = xpos;
-        g_LastCursorPosY = ypos;
+    }
+    // Lógica para o modo NORMAL (mouse com botão)
+    else
+    {
+        // Se o botão esquerdo do mouse estiver pressionado no modo NORMAL,
+        // ele controla a câmera look-at (movendo g_CameraTheta e g_CameraPhi)
+        if (g_LeftMouseButtonPressed)
+        {
+            // Ajusta a câmera look-at com o mouse
+            g_CameraTheta -= 0.01f*dx;
+            g_CameraPhi   -= 0.01f*dy;
+
+            // Restrições de phi para a câmera look-at
+            float phimax = 3.141592f/2;
+            float phimin = -phimax;
+
+            if (g_CameraPhi > phimax)
+                g_CameraPhi = phimax;
+
+            if (g_CameraPhi < phimin)
+                g_CameraPhi = phimin;
+        }
     }
 
-    if (g_RightMouseButtonPressed)
-    {
-        // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
-        float dx = xpos - g_LastCursorPosX;
-        float dy = ypos - g_LastCursorPosY;
-    
-        // Atualizamos parâmetros da antebraço com os deslocamentos
-        g_ForearmAngleZ -= 0.01f*dx;
-        g_ForearmAngleX += 0.01f*dy;
-    
-        // Atualizamos as variáveis globais para armazenar a posição atual do
-        // cursor como sendo a última posição conhecida do cursor.
-        g_LastCursorPosX = xpos;
-        g_LastCursorPosY = ypos;
-    }
-
-    if (g_MiddleMouseButtonPressed)
-    {
-        // Deslocamento do cursor do mouse em x e y de coordenadas de tela!
-        float dx = xpos - g_LastCursorPosX;
-        float dy = ypos - g_LastCursorPosY;
-    
-        // Atualizamos parâmetros da antebraço com os deslocamentos
-        g_TorsoPositionX += 0.01f*dx;
-        g_TorsoPositionY -= 0.01f*dy;
-    
-        // Atualizamos as variáveis globais para armazenar a posição atual do
-        // cursor como sendo a última posição conhecida do cursor.
-        g_LastCursorPosX = xpos;
-        g_LastCursorPosY = ypos;
-    }
+    g_LastCursorPosX = xpos;
+    g_LastCursorPosY = ypos;
 }
 
 // Função callback chamada sempre que o usuário movimenta a "rodinha" do mouse.
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    // Atualizamos a distância da câmera para a origem utilizando a
-    // movimentação da "rodinha", simulando um ZOOM.
-    g_CameraDistance -= 0.1f*yoffset;
+    // Se o modo de câmera livre estiver DESATIVADO, o scroll controla a distância da câmera normal.
+    if (!g_FreeLookMode) // <<=== ADICIONE ESTA CONDIÇÃO
+    {
+        // Usamos a variável yoffset para simular um zoom da câmera.
+        g_CameraDistance -= yoffset;
 
-    // Uma câmera look-at nunca pode estar exatamente "em cima" do ponto para
-    // onde ela está olhando, pois isto gera problemas de divisão por zero na
-    // definição do sistema de coordenadas da câmera. Isto é, a variável abaixo
-    // nunca pode ser zero. Versões anteriores deste código possuíam este bug,
-    // o qual foi detectado pelo aluno Vinicius Fraga (2017/2).
-    const float verysmallnumber = std::numeric_limits<float>::epsilon();
-    if (g_CameraDistance < verysmallnumber)
-        g_CameraDistance = verysmallnumber;
+        // Limita a distância da câmera para evitar valores problemáticos.
+        if (g_CameraDistance < 1.0f)
+            g_CameraDistance = 1.0f;
+    }
+    // Se g_FreeLookMode for true, o scroll não fará nada (ou você poderia adicionar
+    // outra lógica aqui, como mudar o FOV ou a velocidade da câmera livre,
+    // mas por enquanto, vamos mantê-lo sem efeito).
 }
 
 // Definição da função que será chamada sempre que o usuário pressionar alguma
 // tecla do teclado. Veja http://www.glfw.org/docs/latest/input_guide.html#input_key
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 {
+
+    fprintf(stdout, "DEBUG: Key pressed: %d (GLFW_KEY_W=%d, GLFW_KEY_A=%d, GLFW_KEY_S=%d, GLFW_KEY_D=%d) Action: %d\n",
+            key, GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D, action); // <<=== ADICIONE ESTA LINHA
+    fflush(stdout); // Garante que a mensagem seja exibida
+
     // ======================
     // Não modifique este loop! Ele é utilizando para correção automatizada dos
     // laboratórios. Deve ser sempre o primeiro comando desta função KeyCallback().
@@ -1177,43 +1239,10 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     // Se o usuário pressionar a tecla ESC, fechamos a janela.
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+    {
         glfwSetWindowShouldClose(window, GL_TRUE);
-
-    // O código abaixo implementa a seguinte lógica:
-    //   Se apertar tecla X       então g_AngleX += delta;
-    //   Se apertar tecla shift+X então g_AngleX -= delta;
-    //   Se apertar tecla Y       então g_AngleY += delta;
-    //   Se apertar tecla shift+Y então g_AngleY -= delta;
-    //   Se apertar tecla Z       então g_AngleZ += delta;
-    //   Se apertar tecla shift+Z então g_AngleZ -= delta;
-
-    float delta = 3.141592 / 16; // 22.5 graus, em radianos.
-
-    if (key == GLFW_KEY_X && action == GLFW_PRESS)
-    {
-        g_AngleX += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
     }
 
-    if (key == GLFW_KEY_Y && action == GLFW_PRESS)
-    {
-        g_AngleY += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
-    }
-    if (key == GLFW_KEY_Z && action == GLFW_PRESS)
-    {
-        g_AngleZ += (mod & GLFW_MOD_SHIFT) ? -delta : delta;
-    }
-
-    // Se o usuário apertar a tecla espaço, resetamos os ângulos de Euler para zero.
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-    {
-        g_AngleX = 0.0f;
-        g_AngleY = 0.0f;
-        g_AngleZ = 0.0f;
-        g_ForearmAngleX = 0.0f;
-        g_ForearmAngleZ = 0.0f;
-        g_TorsoPositionX = 0.0f;
-        g_TorsoPositionY = 0.0f;
-    }
 
     // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
     if (key == GLFW_KEY_P && action == GLFW_PRESS)
@@ -1240,6 +1269,88 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         fprintf(stdout,"Shaders recarregados!\n");
         fflush(stdout);
     }
+
+
+    // Se o usuário apertar a tecla C, alterna o modo de câmera.
+    if (key == GLFW_KEY_C && action == GLFW_PRESS)
+    {
+        // Primeiro, alternamos o estado do modo de câmera livre.
+        g_FreeLookMode = !g_FreeLookMode;
+
+        if (g_FreeLookMode) // AGORA: Estamos no modo LIVRE (acabamos de ativar)
+        {
+            // === TRANSITION ON: Do modo FIXO para o LIVRE ===
+            // 1. SALVAR O ESTADO ATUAL DA CÂMERA FIXA (para restaurar ao sair)
+            g_FixedCamRestoreDistance = g_CameraDistance;
+            g_FixedCamRestorePhi      = g_CameraPhi;
+            g_FixedCamRestoreTheta    = g_CameraTheta;
+
+            // 2. Captura a posição atual da câmera do modo FIXO (coordenadas cartesianas).
+            float r_fixed = g_CameraDistance;
+            float y_fixed = r_fixed*sin(g_CameraPhi);
+            float z_fixed = r_fixed*cos(g_CameraPhi)*cos(g_CameraTheta);
+            float x_fixed = r_fixed*cos(g_CameraPhi)*sin(g_CameraTheta);
+            g_FreeCameraPosition = glm::vec4(x_fixed, y_fixed, z_fixed, 1.0f);
+
+            // 3. Salva esta posição como o ponto de retorno para quando desativarmos o modo LIVRE.
+            g_FreeCameraStartPosition = g_FreeCameraPosition; // Usado para o debug print e opcionalmente para "resetar" a posição inicial da free cam.
+
+            // 4. Ajusta g_CameraPhi e g_CameraTheta para fazer a CÂMERA LIVRE olhar para o mesmo ponto (origem).
+            glm::vec3 current_cam_pos_vec3 = glm::vec3(g_FreeCameraPosition);
+            glm::vec3 target_point_vec3 = glm::vec3(0.0f, 0.0f, 0.0f);
+            glm::vec3 desired_view_vector = target_point_vec3 - current_cam_pos_vec3;
+
+            g_CameraPhi = atan2(desired_view_vector.y, glm::length(glm::vec2(desired_view_vector.x, desired_view_vector.z)));
+            g_CameraTheta = atan2(desired_view_vector.x, desired_view_vector.z);
+
+            float phimax = 3.141592f/2;
+            float phimin = -phimax;
+            if (g_CameraPhi > phimax) g_CameraPhi = phimax;
+            if (g_CameraPhi < phimin) g_CameraPhi = phimin;
+
+
+            fprintf(stdout, "DEBUG: Modo Câmera Livre ATIVADO. Pos: (%.2f,%.2f,%.2f). Ângulos ajustados: Phi=%.2f, Theta=%.2f\n",
+                    g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z, g_CameraPhi, g_CameraTheta);
+
+            // Opcional: Esconder cursor (se você for implementar o bloqueio do cursor)
+            // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+        else // AGORA: Estamos no modo FIXO (acabamos de desativar)
+        {
+            // === TRANSITION OFF: Do modo LIVRE para o FIXO ===
+            // 1. RESTAURAR o estado completo da câmera fixa para a posição anterior
+            g_CameraDistance = g_FixedCamRestoreDistance;
+            g_CameraPhi      = g_FixedCamRestorePhi;
+            g_CameraTheta    = g_FixedCamRestoreTheta;
+
+            fprintf(stdout, "DEBUG: Modo Câmera Livre DESATIVADO. Restaurado para: (D=%.2f, P=%.2f, T=%.2f)\n",
+                    g_CameraDistance, g_CameraPhi, g_CameraTheta);
+
+            // Opcional: Mostrar cursor (se você for implementar o bloqueio do cursor)
+            // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+        fflush(stdout); // Garante que as mensagens sejam exibidas imediatamente
+    }
+
+    // Lógica para as flags de WASD (independentemente do modo de câmera livre)
+    if (key == GLFW_KEY_W) {
+        g_W_Pressed = (action == GLFW_PRESS || action == GLFW_REPEAT);
+        fprintf(stdout, "DEBUG: W key state: %d (Press/Repeat: %d)\n", g_W_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
+    }
+    if (key == GLFW_KEY_A) {
+        g_A_Pressed = (action == GLFW_PRESS || action == GLFW_REPEAT);
+        fprintf(stdout, "DEBUG: A key state: %d (Press/Repeat: %d)\n", g_A_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
+    }
+    if (key == GLFW_KEY_S) {
+        g_S_Pressed = (action == GLFW_PRESS || action == GLFW_REPEAT);
+        fprintf(stdout, "DEBUG: S key state: %d (Press/Repeat: %d)\n", g_S_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
+    }
+    if (key == GLFW_KEY_D) {
+        g_D_Pressed = (action == GLFW_PRESS || action == GLFW_REPEAT);
+        fprintf(stdout, "DEBUG: D key state: %d (Press/Repeat: %d)\n", g_D_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
+    }
+    fflush(stdout); // Garante que a mensagem seja exibida
+
 }
 
 // Definimos o callback para impressão de erros da GLFW no terminal
