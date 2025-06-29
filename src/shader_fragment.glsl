@@ -96,6 +96,17 @@ if (object_id == SPHERE){
         
     Kd0 = texture(TextureImage[13], vec2(U,V)).rgb;
 }
+
+
+
+else if (object_id == PLANE) // <<=== Este é o ID 1, para o CHÃO
+{
+    // === AQUI VOCÊ DEFINE A COR SÓLIDA PARA O CHÃO ===
+    Kd0 = vec3(0.5f, 0.5f, 0.5f); // Exemplo: Cinza sólido. Ajuste os valores RGB (Red, Green, Blue) entre 0.0f e 1.0f.
+    // Se você quisesse um marrom: Kd0 = vec3(0.6f, 0.4f, 0.2f);
+}
+
+
 else if (object_id == TABLE)
 {
     Kd0 = texture(TextureImage[0], texcoords).rgb;

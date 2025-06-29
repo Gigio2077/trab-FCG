@@ -110,7 +110,6 @@ struct SceneObject
 };
 
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
-
 // A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
 // (map).  Veja dentro da função BuildTrianglesAndAddToVirtualScene() como que são incluídos
 // objetos dentro da variável g_VirtualScene, e veja na função main() como
@@ -218,7 +217,7 @@ int main(int argc, char* argv[])
     // Criamos uma janela do sistema operacional, com 800 colunas e 600 linhas
     // de pixels, e com título "INF01047 ...".
     GLFWwindow* window;
-    window = glfwCreateWindow(800, 600, "Sinuca Simulator- v0.6", NULL, NULL);
+    window = glfwCreateWindow(1920, 1080, "Sinuca Simulator- v0.6", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -247,8 +246,13 @@ int main(int argc, char* argv[])
     // redimensionada, por consequência alterando o tamanho do "framebuffer"
     // (região de memória onde são armazenados os pixels da imagem).
     glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
-    FramebufferSizeCallback(window, 800, 600); // Forçamos a chamada do callback acima, para definir g_ScreenRatio.
 
+    int initial_framebuffer_width, initial_framebuffer_height;
+    glfwGetFramebufferSize(window, &initial_framebuffer_width, &initial_framebuffer_height);
+    // Agora, chamamos o callback com as dimensões REAIS obtidas.
+    FramebufferSizeCallback(window, initial_framebuffer_width, initial_framebuffer_height);
+
+    
     // Imprimimos no terminal informações sobre a GPU do sistema
     const GLubyte *vendor      = glGetString(GL_VENDOR);
     const GLubyte *renderer    = glGetString(GL_RENDERER);
@@ -394,19 +398,19 @@ int main(int argc, char* argv[])
                 // === VERIFICAÇÃO DO MOVIMENTO WASD E ATUALIZAÇÃO DA POSIÇÃO ===
             if (g_W_Pressed) {
                 g_FreeCameraPosition += forward_dir * g_CameraSpeed * deltaTime;
-                fprintf(stdout, "DEBUG: W ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
+                //fprintf(stdout, "DEBUG: W ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
             }
             if (g_S_Pressed) {
                 g_FreeCameraPosition -= forward_dir * g_CameraSpeed * deltaTime;
-                fprintf(stdout, "DEBUG: S ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
+                //fprintf(stdout, "DEBUG: S ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
             }
             if (g_A_Pressed) {
                 g_FreeCameraPosition -= right_dir * g_CameraSpeed * deltaTime;
-                fprintf(stdout, "DEBUG: A ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
+                //fprintf(stdout, "DEBUG: A ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
             }
             if (g_D_Pressed) {
                 g_FreeCameraPosition += right_dir * g_CameraSpeed * deltaTime;
-                fprintf(stdout, "DEBUG: D ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
+                //fprintf(stdout, "DEBUG: D ativado. Nova Posicao Cam Livre: (%.2f, %.2f, %.2f)\n", g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z); // <<=== DEBUG POSIÇÃO
             }
 
 
@@ -468,9 +472,9 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, 999); // Use um ID que seu fragment shader trate como "linha vermelha"
 
         glBindVertexArray(lineVAO);
-        glDrawArrays(GL_LINES, 0, 2);
+        //glDrawArrays(GL_LINES, 0, 2);
         glBindVertexArray(0);
-        //
+        
 
 
 
@@ -484,13 +488,18 @@ int main(int argc, char* argv[])
         #define SPHERE 0
         #define PLANE  1
         #define TABLE  2
-        glDrawArrays(GL_LINES,0,2);
+
+
+    
+
+
+
         // Desenhamos o modelo do plano
         model = Matrix_Translate(0.0f,-1.0f,0.0f)
               * Matrix_Rotate_Z(g_AngleZ)
               * Matrix_Rotate_Y(g_AngleY)
               * Matrix_Rotate_X(g_AngleX)
-              * Matrix_Scale(10.0f, 10.0f, 1.0f);
+              * Matrix_Scale(2.0f, 1.0f, 2.0f);
         glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, PLANE);
         DrawVirtualObject("the_plane");
@@ -523,10 +532,10 @@ int main(int argc, char* argv[])
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
         // terceiro cubo.
-        TextRendering_ShowEulerAngles(window);
+        //TextRendering_ShowEulerAngles(window);
 
         // Imprimimos na informação sobre a matriz de projeção sendo utilizada.
-        TextRendering_ShowProjection(window);
+        //TextRendering_ShowProjection(window);
 
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
@@ -1225,9 +1234,6 @@ void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 {
 
-    fprintf(stdout, "DEBUG: Key pressed: %d (GLFW_KEY_W=%d, GLFW_KEY_A=%d, GLFW_KEY_S=%d, GLFW_KEY_D=%d) Action: %d\n",
-            key, GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D, action); // <<=== ADICIONE ESTA LINHA
-    fflush(stdout); // Garante que a mensagem seja exibida
 
     // ======================
     // Não modifique este loop! Ele é utilizando para correção automatizada dos
@@ -1284,6 +1290,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             g_FixedCamRestoreDistance = g_CameraDistance;
             g_FixedCamRestorePhi      = g_CameraPhi;
             g_FixedCamRestoreTheta    = g_CameraTheta;
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
             // 2. Captura a posição atual da câmera do modo FIXO (coordenadas cartesianas).
             float r_fixed = g_CameraDistance;
@@ -1309,11 +1316,10 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             if (g_CameraPhi < phimin) g_CameraPhi = phimin;
 
 
-            fprintf(stdout, "DEBUG: Modo Câmera Livre ATIVADO. Pos: (%.2f,%.2f,%.2f). Ângulos ajustados: Phi=%.2f, Theta=%.2f\n",
-                    g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z, g_CameraPhi, g_CameraTheta);
+            //fprintf(stdout, "DEBUG: Modo Câmera Livre ATIVADO. Pos: (%.2f,%.2f,%.2f). Ângulos ajustados: Phi=%.2f, Theta=%.2f\n",
+              //      g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z, g_CameraPhi, g_CameraTheta);
 
-            // Opcional: Esconder cursor (se você for implementar o bloqueio do cursor)
-            // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    
         }
         else // AGORA: Estamos no modo FIXO (acabamos de desativar)
         {
@@ -1322,9 +1328,10 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             g_CameraDistance = g_FixedCamRestoreDistance;
             g_CameraPhi      = g_FixedCamRestorePhi;
             g_CameraTheta    = g_FixedCamRestoreTheta;
-
-            fprintf(stdout, "DEBUG: Modo Câmera Livre DESATIVADO. Restaurado para: (D=%.2f, P=%.2f, T=%.2f)\n",
-                    g_CameraDistance, g_CameraPhi, g_CameraTheta);
+            
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            //fprintf(stdout, "DEBUG: Modo Câmera Livre DESATIVADO. Restaurado para: (D=%.2f, P=%.2f, T=%.2f)\n",
+              //      g_CameraDistance, g_CameraPhi, g_CameraTheta);
 
             // Opcional: Mostrar cursor (se você for implementar o bloqueio do cursor)
             // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -1335,19 +1342,19 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     // Lógica para as flags de WASD (independentemente do modo de câmera livre)
     if (key == GLFW_KEY_W) {
         g_W_Pressed = (action == GLFW_PRESS || action == GLFW_REPEAT);
-        fprintf(stdout, "DEBUG: W key state: %d (Press/Repeat: %d)\n", g_W_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
+        //fprintf(stdout, "DEBUG: W key state: %d (Press/Repeat: %d)\n", g_W_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
     }
     if (key == GLFW_KEY_A) {
         g_A_Pressed = (action == GLFW_PRESS || action == GLFW_REPEAT);
-        fprintf(stdout, "DEBUG: A key state: %d (Press/Repeat: %d)\n", g_A_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
+        //fprintf(stdout, "DEBUG: A key state: %d (Press/Repeat: %d)\n", g_A_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
     }
     if (key == GLFW_KEY_S) {
         g_S_Pressed = (action == GLFW_PRESS || action == GLFW_REPEAT);
-        fprintf(stdout, "DEBUG: S key state: %d (Press/Repeat: %d)\n", g_S_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
+        //fprintf(stdout, "DEBUG: S key state: %d (Press/Repeat: %d)\n", g_S_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
     }
     if (key == GLFW_KEY_D) {
         g_D_Pressed = (action == GLFW_PRESS || action == GLFW_REPEAT);
-        fprintf(stdout, "DEBUG: D key state: %d (Press/Repeat: %d)\n", g_D_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
+        //fprintf(stdout, "DEBUG: D key state: %d (Press/Repeat: %d)\n", g_D_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
     }
     fflush(stdout); // Garante que a mensagem seja exibida
 
