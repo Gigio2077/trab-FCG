@@ -183,6 +183,12 @@ const float BALL_Y_AXIS = -0.2667f; // Valor fornecido pelo usuário.
 const float BALL_VIRTUAL_RADIUS = 0.02625f; 
 
 
+const float TABLE_X_MAX_BALL_CENTER = 0.52025000f; // Exemplo de valor obtido
+const float TABLE_X_MIN_BALL_CENTER = -0.52125000f; // Exemplo de valor obtido
+const float TABLE_Z_MIN_BALL_CENTER = -1.14725000f; // Exemplo de valor obtido
+const float TABLE_Z_MAX_BALL_CENTER = 1.13725000f; // Exemplo de valor obtido
+
+
 // A altura da superfície do feltro da mesa será o centro da bola menos o raio da bola.
 const float FELT_SURFACE_Y_ACTUAL = BALL_Y_AXIS - BALL_VIRTUAL_RADIUS;
 
@@ -271,7 +277,7 @@ int main(int argc, char* argv[])
     // Criamos uma janela do sistema operacional, com 800 colunas e 600 linhas
     // de pixels, e com título "INF01047 ...".
     GLFWwindow* window;
-    window = glfwCreateWindow(1920, 1080, "Sinuca Simulator- v0.6", NULL, NULL);
+    window = glfwCreateWindow(1920, 1080, "Sinuca Simulator- v0.7", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -355,9 +361,9 @@ int main(int argc, char* argv[])
 
 
     // === INICIALIZAÇÃO DA BOLA DE DEPURACAO ===
-    g_DebugBall.radius = BALL_VIRTUAL_RADIUS; // Usa a constante de raio que já existe (0.02625f)
+    g_DebugBall.radius = 0.06f; // Usa a constante de raio que já existe (0.02625f)
     // Posição Y inicial: no feltro da mesa + o raio da bola para que ela não afunde
-    g_DebugBall.position = glm::vec3(-0.0020f, -0.2667f, 0.5680f); // <<=== MUDANÇA AQUI
+    g_DebugBall.position = glm::vec3(-0.0020f, -0.2667f, 0.5680f); 
     g_DebugBall.active = true;
     g_DebugBall.object_name = "the_sphere"; // Reutiliza o modelo da esfera
     g_DebugBall.object_id = SPHERE; // Usa o ID SPHERE (0) para renderização
@@ -365,17 +371,17 @@ int main(int argc, char* argv[])
 
     // === INICIALIZAÇÃO DOS SEGMENTOS DE TABELA ===
     // Segmento 1
-    g_TableSegments.push_back({glm::vec3(0.4940f , BALL_Y_AXIS, -0.0730f), glm::vec3(0.4940f, BALL_Y_AXIS, -1.0480f)});
+    g_TableSegments.push_back({glm::vec3(TABLE_X_MAX_BALL_CENTER, BALL_Y_AXIS, -0.0730f), glm::vec3(TABLE_X_MAX_BALL_CENTER, BALL_Y_AXIS, -1.0480f)});
     // Segmento 2
-    g_TableSegments.push_back({glm::vec3(0.4310f, BALL_Y_AXIS, -1.1210f), glm::vec3(-0.4400f, BALL_Y_AXIS, -1.1210f)});
+    g_TableSegments.push_back({glm::vec3(0.4310f, BALL_Y_AXIS, TABLE_Z_MIN_BALL_CENTER), glm::vec3(-0.4400f, BALL_Y_AXIS, TABLE_Z_MIN_BALL_CENTER)});
     // Segmento 3
-    g_TableSegments.push_back({glm::vec3(-0.4950f, BALL_Y_AXIS, -1.0470f), glm::vec3(-0.4950f, BALL_Y_AXIS, -0.0730f)});
+    g_TableSegments.push_back({glm::vec3(TABLE_X_MIN_BALL_CENTER, BALL_Y_AXIS, -1.0470f), glm::vec3(TABLE_X_MIN_BALL_CENTER, BALL_Y_AXIS, -0.0730f)});
     // Segmento 4
-    g_TableSegments.push_back({glm::vec3(-0.4950f, BALL_Y_AXIS, 0.0760f), glm::vec3(-0.4950f, BALL_Y_AXIS, 1.0490f)});
+    g_TableSegments.push_back({glm::vec3(TABLE_X_MIN_BALL_CENTER, BALL_Y_AXIS, 0.0760f), glm::vec3(TABLE_X_MIN_BALL_CENTER, BALL_Y_AXIS, 1.0490f)});
     // Segmento 5
-    g_TableSegments.push_back({glm::vec3(-0.4400f, BALL_Y_AXIS, 1.1210f), glm::vec3(0.4340f, BALL_Y_AXIS, 1.1210f)});
+    g_TableSegments.push_back({glm::vec3(-0.4400f, BALL_Y_AXIS, TABLE_Z_MAX_BALL_CENTER), glm::vec3(0.4340f, BALL_Y_AXIS, TABLE_Z_MAX_BALL_CENTER)});
     // Segmento 6
-    g_TableSegments.push_back({glm::vec3(0.4950f, BALL_Y_AXIS, 1.0520f), glm::vec3(0.4950f, BALL_Y_AXIS, 0.0770f)});
+    g_TableSegments.push_back({glm::vec3(TABLE_X_MAX_BALL_CENTER , BALL_Y_AXIS, 1.0520f), glm::vec3(TABLE_X_MAX_BALL_CENTER, BALL_Y_AXIS, 0.0770f)});
 
     // ===========================================
 
@@ -1566,14 +1572,18 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         // Mover em X (esquerda/direita)
         if (key == GLFW_KEY_LEFT) 
         {
-        g_DebugBall.velocity.z = 1.0f; // Ou um empurrão para frente no eixo Z
+        g_DebugBall.velocity.z = g_DebugBall.velocity.z + 0.3; // Ou um empurrão para frente no eixo Z
+        //g_DebugBall.position.z = g_DebugBall.position.z + 0.01f;
+
         fprintf(stdout, "DEBUG: Bola empurrada! Pos: (%.2f, %.2f, %.2f) Vel: (%.2f, %.2f, %.2f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z, g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
         fflush(stdout);
         }
 
         if (key == GLFW_KEY_RIGHT)
         {
-        g_DebugBall.velocity.z = -1.0f; // Ou um empurrão para frente no eixo Z
+        g_DebugBall.velocity.z =  g_DebugBall.velocity.z - 0.3f; // Ou um empurrão para frente no eixo Z
+        //g_DebugBall.position.z = g_DebugBall.position.z - 0.01f;
+
         fprintf(stdout, "DEBUG: Bola empurrada! Pos: (%.2f, %.2f, %.2f) Vel: (%.2f, %.2f, %.2f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z, g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
         fflush(stdout);
         }
@@ -1581,14 +1591,18 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         // Mover em Y (cima/baixo) - Eixo vertical no seu mundo
         if (key == GLFW_KEY_UP)
         {
-        g_DebugBall.velocity.x = 1.0f; // Ou um empurrão para frente no eixo Z
+        g_DebugBall.velocity.x =  g_DebugBall.velocity.x - 0.3f; // Ou um empurrão para frente no eixo Z
+        //g_DebugBall.position.x = g_DebugBall.position.z + 0.01f;
+        
         fprintf(stdout, "DEBUG: Bola empurrada! Pos: (%.2f, %.2f, %.2f) Vel: (%.2f, %.2f, %.2f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z, g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
         fflush(stdout);
         }
 
         if (key == GLFW_KEY_DOWN) 
         {
-        g_DebugBall.velocity.x = -1.0f; // Ou um empurrão para frente no eixo Z
+        g_DebugBall.velocity.x =  g_DebugBall.velocity.x + 0.3f; // Ou um empurrão para frente no eixo Z
+        //g_DebugBall.position.x = g_DebugBall.position.z - 0.01f;
+        
         fprintf(stdout, "DEBUG: Bola empurrada! Pos: (%.2f, %.2f, %.2f) Vel: (%.2f, %.2f, %.2f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z, g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
         fflush(stdout);
         }
