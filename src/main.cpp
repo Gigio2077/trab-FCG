@@ -66,6 +66,7 @@ void LoadShader(const char* filename, GLuint shader_id); // Função utilizada p
 GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // Cria um programa de GPU
 void PrintObjModelInfo(ObjModel*, bool showAllInfo = false); // Função para debugging
 
+
 // Declaração de funções auxiliares para renderizar texto dentro da janela
 // OpenGL. Estas funções estão definidas no arquivo "textrendering.cpp".
 void TextRendering_Init();
@@ -108,6 +109,28 @@ struct SceneObject
     glm::vec3    bbox_min; // Axis-Aligned Bounding Box do objeto
     glm::vec3    bbox_max;
 };
+
+
+
+// Estrutura para representar uma bola no jogo, com propriedades básicas.
+// Usada aqui para depurar o movimento da bola.
+struct GameBall {
+        glm::vec3 position;
+        glm::vec3 velocity; // <<=== ADICIONE ESTA LINHA
+        float radius;
+        bool  active;
+        std::string object_name;
+        int   object_id;
+    };
+
+// Variável global para a bola que vamos movimentar e depurar
+GameBall g_DebugBall; // Será a bola principal para depuração
+
+// Tamanho do passo para o movimento fixo da bola (em unidades do mundo virtual)
+float g_BallStepSize = 0.001f; // <<=== Comece com 0.1. Ajuste este valor conforme sua escala.
+
+
+
 
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
 // A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
@@ -155,20 +178,44 @@ bool g_ShowInfoText = true;
 // Variável que controla se o modo de câmera livre está ativo
 bool g_FreeLookMode = false;
 
-const int TABLE_LENGTH_CM = 213.0f;
+// Altura fixa em Y para o CENTRO das bolas quando elas estão apoiadas na mesa.
+const float BALL_Y_AXIS = -0.2667f; // Valor fornecido pelo usuário.
+const float BALL_VIRTUAL_RADIUS = 0.02625f; 
 
-const int TABLE_WIDTH_CM = 112.0f;
 
-const int TABLE_SURFACE_HEIGHT_CM = 75.0f;
+// A altura da superfície do feltro da mesa será o centro da bola menos o raio da bola.
+const float FELT_SURFACE_Y_ACTUAL = BALL_Y_AXIS - BALL_VIRTUAL_RADIUS;
 
-const float BALL_RADIUS_CM = 2.625f;
+
+
+// Constantes físicas
+const float GRAVITY = 9.8f; // Gravidade (em unidades/s^2, se unidades são metros, 9.8 m/s^2)
+const float RESTITUTION_COEFF = 0.8f; // Coeficiente de restituição (0.0 para sem quique, 1.0 para quique perfeito)
+const float BALL_FRICTION_FACTOR = 0.99f; // Fator de atrito para desacelerar a bola (por frame)
+
+// Estrutura para definir um segmento de reta da tabela
+struct BoundingSegment {
+    glm::vec3 p1; // Ponto inicial do segmento
+    glm::vec3 p2; // Ponto final do segmento
+};
+
+// Segmentos de reta que formam as tabelas internas da mesa (onde a bola colide).
+// As coordenadas são o centro da bola quando em contato com a tabela.
+std::vector<BoundingSegment> g_TableSegments;
+
+
+#define SPHERE 0
+#define PLANE  1
+#define TABLE  2
 
 // Variáveis para a posição da câmera no modo livre
 // Inicie com valores que façam sentido para o seu cenário (ex: acima do plano da mesa)
 glm::vec4 g_FreeCameraPosition = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); 
 glm::vec4 g_FreeCameraStartPosition = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); 
 // Velocidade de movimento da câmera em cm/s (ajuste este valor para o que parecer natural)
-float g_CameraSpeed = 2.0f; // 200 cm/s = 2 metros por segundo
+float g_CameraSpeed = 2.0f; // 
+
+
 
 // Flags para as teclas WASD (true se a tecla está pressionada)
 bool g_W_Pressed = false;
@@ -289,11 +336,68 @@ int main(int argc, char* argv[])
     ComputeNormals(&tablemodel);
     BuildTrianglesAndAddToVirtualScene(&tablemodel);
 
+
+    
+    /*
+    glm::vec3 table_original_bbox_min = glm::vec3( std::numeric_limits<float>::max() );
+    glm::vec3 table_original_bbox_max = glm::vec3( std::numeric_limits<float>::min() );
+
+    // Itera sobre todos os vértices do modelo para encontrar os valores min e max
+    for (size_t v_idx = 0; v_idx < tablemodel.attrib.vertices.size() / 3; ++v_idx)
+    {
+        float vx = tablemodel.attrib.vertices[3 * v_idx + 0];
+        float vy = tablemodel.attrib.vertices[3 * v_idx + 1];
+        float vz = tablemodel.attrib.vertices[3 * v_idx + 2];
+
+        table_original_bbox_min.x = std::min(table_original_bbox_min.x, vx);
+        table_original_bbox_min.y = std::min(table_original_bbox_min.y, vy);
+        table_original_bbox_min.z = std::min(table_original_bbox_min.z, vz);
+        table_original_bbox_max.x = std::max(table_original_bbox_max.x, vx);
+        table_original_bbox_max.y = std::max(table_original_bbox_max.y, vy);
+        table_original_bbox_max.z = std::max(table_original_bbox_max.z, vz);
+    }
+
+    fprintf(stdout, "DEBUG: Original ObjModel Table BBox Min: (%.2f, %.2f, %.2f)\n",
+            table_original_bbox_min.x, table_original_bbox_min.y, table_original_bbox_min.z);
+    fprintf(stdout, "DEBUG: Original ObjModel Table BBox Max: (%.2f, %.2f, %.2f)\n",
+            table_original_bbox_max.x, table_original_bbox_max.y, table_original_bbox_max.z);
+    fflush(stdout);*/
+    
+     
+
     if ( argc > 1 )
     {
         ObjModel model(argv[1]);
         BuildTrianglesAndAddToVirtualScene(&model);
     }
+
+
+
+    // === INICIALIZAÇÃO DA BOLA DE DEPURACAO ===
+    g_DebugBall.radius = BALL_VIRTUAL_RADIUS; // Usa a constante de raio que já existe (0.02625f)
+    // Posição Y inicial: no feltro da mesa + o raio da bola para que ela não afunde
+    g_DebugBall.position = glm::vec3(0.0f, FELT_SURFACE_Y_ACTUAL + g_DebugBall.radius, 0.0f); // Centralizada em XZ, no feltro.
+    g_DebugBall.active = true;
+    g_DebugBall.object_name = "the_sphere"; // Reutiliza o modelo da esfera
+    g_DebugBall.object_id = SPHERE; // Usa o ID SPHERE (0) para renderização
+    g_DebugBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // <<=== INICIALIZA A VELOCIDADE DA BOLA DE DEBUG
+
+    // === INICIALIZAÇÃO DOS SEGMENTOS DE TABELA ===
+    // Segmento 1
+    g_TableSegments.push_back({glm::vec3(0.4940f, BALL_Y_AXIS, -0.0730f), glm::vec3(0.4940f, BALL_Y_AXIS, -1.0480f)});
+    // Segmento 2
+    g_TableSegments.push_back({glm::vec3(0.4310f, BALL_Y_AXIS, -1.1210f), glm::vec3(-0.4400f, BALL_Y_AXIS, -1.1210f)});
+    // Segmento 3
+    g_TableSegments.push_back({glm::vec3(-0.4950f, BALL_Y_AXIS, -1.0470f), glm::vec3(-0.4950f, BALL_Y_AXIS, -0.0730f)});
+    // Segmento 4
+    g_TableSegments.push_back({glm::vec3(-0.4950f, BALL_Y_AXIS, 0.0760f), glm::vec3(-0.4950f, BALL_Y_AXIS, 1.0490f)});
+    // Segmento 5
+    g_TableSegments.push_back({glm::vec3(-0.4400f, BALL_Y_AXIS, 1.1210f), glm::vec3(0.4340f, BALL_Y_AXIS, 1.1210f)});
+    // Segmento 6
+    g_TableSegments.push_back({glm::vec3(0.4950f, BALL_Y_AXIS, 1.0520f), glm::vec3(0.4950f, BALL_Y_AXIS, 0.0770f)});
+
+    // ===========================================
+
 
     // Inicializamos o código para renderização de texto.
     TextRendering_Init();
@@ -306,29 +410,8 @@ int main(int argc, char* argv[])
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
-    PrintObjModelInfo(&planemodel);
+    
 
-    // Linhas auxiliares
-    // Linha de exemplo: de (-1,0,0) até (1,0,0)
-    float line_vertices[] = {
-        -1.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f
-    };
-
-    GLuint lineVAO, lineVBO;
-    glGenVertexArrays(1, &lineVAO);
-    glGenBuffers(1, &lineVBO);
-
-    glBindVertexArray(lineVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
-
-    // Supondo que o layout location 0 seja a posição (vec3 a_position no vertex shader)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glBindVertexArray(0);
-    //
 
 
 
@@ -365,6 +448,50 @@ int main(int argc, char* argv[])
         lastFrameTime = currentFrameTime;
         //fprintf(stdout, "DEBUG: DeltaTime: %.4f\n", deltaTime); // <<=== VERIFICA SE DELTATIME É NÃO-ZERO
 
+        if (g_DebugBall.active)
+        {
+            // 1. Aplicar gravidade à velocidade Y
+            g_DebugBall.velocity.y -= GRAVITY * deltaTime;
+
+            // 2. Atualizar a posição da bola com base na velocidade
+            g_DebugBall.position += g_DebugBall.velocity * deltaTime;
+
+            // 3. Aplicar atrito (desaceleração geral)
+            g_DebugBall.velocity.x *= BALL_FRICTION_FACTOR;
+            g_DebugBall.velocity.z *= BALL_FRICTION_FACTOR; // Apenas nos eixos XZ, para simular atrito no plano
+            // Se a velocidade for muito baixa, pare a bola completamente para evitar arrastos infinitos
+            if (glm::length(glm::vec2(g_DebugBall.velocity.x, g_DebugBall.velocity.z)) < 0.01f) {
+                g_DebugBall.velocity.x = 0.0f;
+                g_DebugBall.velocity.z = 0.0f;
+            }
+
+
+            // 4. Teste de Colisão com o Feltro da Mesa (Chão)
+            // A colisão ocorre quando a parte de baixo da bola atinge a superfície do feltro.
+            // A superfície do feltro está em FELT_SURFACE_Y_ACTUAL.
+            if (g_DebugBall.position.y - g_DebugBall.radius < FELT_SURFACE_Y_ACTUAL)
+            {
+                // Ajustar a posição para que a bola não afunde no feltro
+                g_DebugBall.position.y = FELT_SURFACE_Y_ACTUAL + g_DebugBall.radius;
+
+                // Inverter a velocidade Y para simular o quique
+                // Multiplicamos pelo coeficiente de restituição para perder energia no quique
+                g_DebugBall.velocity.y *= -1.0f * RESTITUTION_COEFF;
+
+                // Opcional: Se o quique é muito pequeno, zere a velocidade Y para a bola parar de quicar
+                if (glm::abs(g_DebugBall.velocity.y) < 0.1f) { // Se a velocidade vertical for muito baixa
+                    g_DebugBall.velocity.y = 0.0f;
+                    // E ajuste a posição para garantir que está perfeitamente no feltro se ela parou
+                    g_DebugBall.position.y = FELT_SURFACE_Y_ACTUAL + g_DebugBall.radius;
+                }
+            }
+
+            // === IMPRIMIR POSIÇÃO E VELOCIDADE DA BOLA DE DEBUG ===
+            fprintf(stdout, "DEBUG BOLA: Pos: (%.4f, %.4f, %.4f) Vel: (%.4f, %.4f, %.4f)\n",
+                    g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z,
+                    g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
+            fflush(stdout);
+        }
 
 
         glm::vec4 camera_position_c;  // Ponto "c", centro da câmera
@@ -464,19 +591,6 @@ int main(int argc, char* argv[])
 
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
 
-        // linhas auxiliares
-        // Linha vermelha, com identidade como model matrix
-        glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-
-        // Envie uma cor vermelha diretamente ao seu shader (se seu shader aceitar cor por uniforme)
-        glUniform1i(g_object_id_uniform, 999); // Use um ID que seu fragment shader trate como "linha vermelha"
-
-        glBindVertexArray(lineVAO);
-        //glDrawArrays(GL_LINES, 0, 2);
-        glBindVertexArray(0);
-        
-
-
 
 
         // Enviamos as matrizes "view" e "projection" para a placa de vídeo
@@ -485,9 +599,6 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
-        #define SPHERE 0
-        #define PLANE  1
-        #define TABLE  2
 
 
     
@@ -513,21 +624,16 @@ int main(int argc, char* argv[])
         DrawVirtualObject("10523_Pool_Table_v1_SG");
 
         
-        // Desenhamos as bolas (vai ter que ter um loop)
-        model = Matrix_Translate(0.0f, 0.2f, 0.0f)
-        * Matrix_Scale(0.05f, 0.05f, 0.05f)
-        * Matrix_Rotate_X(-M_PI/2.0f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, SPHERE);
-        DrawVirtualObject("the_sphere");
-
-        // Desenhamos as bolas (vai ter que ter um loop)
-        model = Matrix_Translate(0.2f, 0.2f, 0.3f)
-        * Matrix_Scale(0.05f, 0.05f, 0.05f)
-        * Matrix_Rotate_X(-M_PI/2.0f);
-        glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        glUniform1i(g_object_id_uniform, SPHERE);
-        DrawVirtualObject("the_sphere");        
+        if (g_DebugBall.active) // Só desenha se a bola estiver ativa
+        {
+            glm::mat4 model_debug_ball = Matrix_Translate(g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z)
+                                       * Matrix_Scale(g_DebugBall.radius, g_DebugBall.radius, g_DebugBall.radius)
+                                       * Matrix_Rotate_X(-M_PI/2.0f); // Mantenha a rotação se o modelo da esfera estiver deitado
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model_debug_ball));
+            glUniform1i(g_object_id_uniform, g_DebugBall.object_id);
+            DrawVirtualObject(g_DebugBall.object_name.c_str());
+        }
+ 
 
 
         // Imprimimos na tela os ângulos de Euler que controlam a rotação do
@@ -1249,6 +1355,19 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         glfwSetWindowShouldClose(window, GL_TRUE);
     }
 
+    // Se o usuário apertar a tecla P, aplica uma velocidade inicial na bola de debug
+    if (key == GLFW_KEY_G && action == GLFW_PRESS)
+    {
+        // Reinicia a bola para uma posição conhecida acima do feltro
+        g_DebugBall.position = glm::vec3(0.0f, FELT_SURFACE_Y_ACTUAL + g_DebugBall.radius + 0.1f, 0.0f); // Um pouco acima do feltro
+        g_DebugBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Zera velocidade
+        
+        // Aplica um pequeno empurrão inicial para a frente ou para cima para testar gravidade
+        g_DebugBall.velocity.y = 2.0f; // Exemplo: um pequeno empurrão para cima para ver a bola cair
+        // g_DebugBall.velocity.z = -1.0f; // Ou um empurrão para frente no eixo Z
+        fprintf(stdout, "DEBUG: Bola empurrada! Pos: (%.2f, %.2f, %.2f) Vel: (%.2f, %.2f, %.2f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z, g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
+        fflush(stdout);
+    }
 
     // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
     if (key == GLFW_KEY_P && action == GLFW_PRESS)
@@ -1356,6 +1475,39 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         g_D_Pressed = (action == GLFW_PRESS || action == GLFW_REPEAT);
         //fprintf(stdout, "DEBUG: D key state: %d (Press/Repeat: %d)\n", g_D_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
     }
+
+
+
+
+
+    if (action == GLFW_PRESS || action == GLFW_REPEAT)
+    {
+        // Mover em X (esquerda/direita)
+        if (key == GLFW_KEY_LEFT) { // Seta para a esquerda
+            g_DebugBall.position.x -= g_BallStepSize;
+        }
+        if (key == GLFW_KEY_RIGHT) { // Seta para a direita
+            g_DebugBall.position.x += g_BallStepSize;
+        }
+
+        // Mover em Y (cima/baixo) - Eixo vertical no seu mundo
+        if (key == GLFW_KEY_UP) { // Seta para cima
+            g_DebugBall.position.y += g_BallStepSize;
+        }
+        if (key == GLFW_KEY_DOWN) { // Seta para baixo
+            g_DebugBall.position.y -= g_BallStepSize;
+        }
+
+        // Mover em Z (frente/trás) - Profundidade no seu mundo
+        if (key == GLFW_KEY_PAGE_UP) { // Page Up
+            g_DebugBall.position.z -= g_BallStepSize; // Mover para "frente" (Z negativo, se sua câmera olha para -Z)
+        }
+        if (key == GLFW_KEY_PAGE_DOWN) { // Page Down
+            g_DebugBall.position.z += g_BallStepSize; // Mover para "trás" (Z positivo)
+        }
+    }
+    
+
     fflush(stdout); // Garante que a mensagem seja exibida
 
 }
@@ -1508,6 +1660,8 @@ void PrintObjModelInfo(ObjModel* model, bool showAllInfo)
   printf("# of texcoords : %d\n", (int)(attrib.texcoords.size() / 2));
   printf("# of shapes    : %d\n", (int)shapes.size());
   printf("# of materials : %d\n", (int)materials.size());
+
+  
 
   if (showAllInfo){
     for (size_t v = 0; v < attrib.vertices.size() / 3; v++) {
@@ -1665,6 +1819,9 @@ void PrintObjModelInfo(ObjModel* model, bool showAllInfo)
     }
   }
 }
+
+
+
 
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
 // vim: set spell spelllang=pt_br :
