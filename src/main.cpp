@@ -192,6 +192,10 @@ const float FELT_SURFACE_Y_ACTUAL = BALL_Y_AXIS - BALL_VIRTUAL_RADIUS;
 const float GRAVITY = 9.8f; // Gravidade (em unidades/s^2, se unidades são metros, 9.8 m/s^2)
 const float RESTITUTION_COEFF = 0.8f; // Coeficiente de restituição (0.0 para sem quique, 1.0 para quique perfeito)
 const float BALL_FRICTION_FACTOR = 0.99f; // Fator de atrito para desacelerar a bola (por frame)
+const float COLLISION_EPSILON = 0.001f; // Pequeno valor para evitar problemas de "colar" na parede.
+const float VELOCITY_STOP_THRESHOLD = 0.01f; // Limiar para zerar velocidade quando muito baixa.
+
+
 
 // Estrutura para definir um segmento de reta da tabela
 struct BoundingSegment {
@@ -231,6 +235,9 @@ GLint g_projection_uniform;
 GLint g_object_id_uniform;
 GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
+
+GLuint lineVAO;
+GLuint lineVBO;
 
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
@@ -338,32 +345,6 @@ int main(int argc, char* argv[])
 
 
     
-    /*
-    glm::vec3 table_original_bbox_min = glm::vec3( std::numeric_limits<float>::max() );
-    glm::vec3 table_original_bbox_max = glm::vec3( std::numeric_limits<float>::min() );
-
-    // Itera sobre todos os vértices do modelo para encontrar os valores min e max
-    for (size_t v_idx = 0; v_idx < tablemodel.attrib.vertices.size() / 3; ++v_idx)
-    {
-        float vx = tablemodel.attrib.vertices[3 * v_idx + 0];
-        float vy = tablemodel.attrib.vertices[3 * v_idx + 1];
-        float vz = tablemodel.attrib.vertices[3 * v_idx + 2];
-
-        table_original_bbox_min.x = std::min(table_original_bbox_min.x, vx);
-        table_original_bbox_min.y = std::min(table_original_bbox_min.y, vy);
-        table_original_bbox_min.z = std::min(table_original_bbox_min.z, vz);
-        table_original_bbox_max.x = std::max(table_original_bbox_max.x, vx);
-        table_original_bbox_max.y = std::max(table_original_bbox_max.y, vy);
-        table_original_bbox_max.z = std::max(table_original_bbox_max.z, vz);
-    }
-
-    fprintf(stdout, "DEBUG: Original ObjModel Table BBox Min: (%.2f, %.2f, %.2f)\n",
-            table_original_bbox_min.x, table_original_bbox_min.y, table_original_bbox_min.z);
-    fprintf(stdout, "DEBUG: Original ObjModel Table BBox Max: (%.2f, %.2f, %.2f)\n",
-            table_original_bbox_max.x, table_original_bbox_max.y, table_original_bbox_max.z);
-    fflush(stdout);*/
-    
-     
 
     if ( argc > 1 )
     {
@@ -376,7 +357,7 @@ int main(int argc, char* argv[])
     // === INICIALIZAÇÃO DA BOLA DE DEPURACAO ===
     g_DebugBall.radius = BALL_VIRTUAL_RADIUS; // Usa a constante de raio que já existe (0.02625f)
     // Posição Y inicial: no feltro da mesa + o raio da bola para que ela não afunde
-    g_DebugBall.position = glm::vec3(0.0f, FELT_SURFACE_Y_ACTUAL + g_DebugBall.radius, 0.0f); // Centralizada em XZ, no feltro.
+    g_DebugBall.position = glm::vec3(-0.0020f, -0.2667f, 0.5680f); // <<=== MUDANÇA AQUI
     g_DebugBall.active = true;
     g_DebugBall.object_name = "the_sphere"; // Reutiliza o modelo da esfera
     g_DebugBall.object_id = SPHERE; // Usa o ID SPHERE (0) para renderização
@@ -384,7 +365,7 @@ int main(int argc, char* argv[])
 
     // === INICIALIZAÇÃO DOS SEGMENTOS DE TABELA ===
     // Segmento 1
-    g_TableSegments.push_back({glm::vec3(0.4940f, BALL_Y_AXIS, -0.0730f), glm::vec3(0.4940f, BALL_Y_AXIS, -1.0480f)});
+    g_TableSegments.push_back({glm::vec3(0.4940f , BALL_Y_AXIS, -0.0730f), glm::vec3(0.4940f, BALL_Y_AXIS, -1.0480f)});
     // Segmento 2
     g_TableSegments.push_back({glm::vec3(0.4310f, BALL_Y_AXIS, -1.1210f), glm::vec3(-0.4400f, BALL_Y_AXIS, -1.1210f)});
     // Segmento 3
@@ -447,6 +428,38 @@ int main(int argc, char* argv[])
         float deltaTime = (float)(currentFrameTime - lastFrameTime);
         lastFrameTime = currentFrameTime;
         //fprintf(stdout, "DEBUG: DeltaTime: %.4f\n", deltaTime); // <<=== VERIFICA SE DELTATIME É NÃO-ZERO
+        
+
+
+        // Linhas auxiliares
+        // Linha de exemplo: de (-1,0,0) até (1,0,0)
+        float line_vertices[] = {
+            -1.0f, 0.0f, 0.0f,
+            1.0f, 0.0f, 0.0f
+        };
+
+        
+        lineVAO; 
+        lineVBO; 
+
+        
+        glGenVertexArrays(1, &lineVAO);
+        glGenBuffers(1, &lineVBO);
+
+        glBindVertexArray(lineVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices), line_vertices, GL_STATIC_DRAW);
+
+        // Supondo que o layout location 0 seja a posição (vec3 a_position no vertex shader)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
+        glBindVertexArray(0);
+
+
+
+
+
 
         if (g_DebugBall.active)
         {
@@ -483,6 +496,88 @@ int main(int argc, char* argv[])
                     g_DebugBall.velocity.y = 0.0f;
                     // E ajuste a posição para garantir que está perfeitamente no feltro se ela parou
                     g_DebugBall.position.y = FELT_SURFACE_Y_ACTUAL + g_DebugBall.radius;
+                }
+            }
+
+            
+
+
+            // === TESTE DE COLISÃO COM AS TABELAS (SEGMENTOS DE RETA) ===
+
+            for (const auto& segment : g_TableSegments)
+            {
+                // As coordenadas do segmento já representam a posição do centro da bola no limite.
+                // O teste é se a bola tentou ultrapassar essa linha.
+                
+                // As tabelas são verticais. A colisão será principalmente nos eixos X ou Z.
+                // As coordenadas Y do segmento são BALL_Y_AXIS, que é o centro da bola.
+                // A altura da bola é fixa em Y, mas a colisão é no plano XZ.
+
+                // Vamos considerar cada segmento como uma "parede" (uma linha) no plano XZ.
+                // p1 e p2 são os pontos do segmento.
+
+                // Vetor que representa o segmento de reta
+                glm::vec2 segment_vec = glm::vec2(segment.p2.x - segment.p1.x, segment.p2.z - segment.p1.z);
+                // Vetor da posição da bola ao ponto inicial do segmento
+                glm::vec2 ball_to_p1_vec = glm::vec2(g_DebugBall.position.x - segment.p1.x, g_DebugBall.position.z - segment.p1.z);
+
+                // Projetamos o vetor da bola no segmento (para encontrar o ponto mais próximo no segmento infinito)
+                float t = glm::dot(ball_to_p1_vec, segment_vec) / glm::dot(segment_vec, segment_vec);
+
+                // Clampear 't' para garantir que o ponto mais próximo esteja DENTRO do segmento de reta.
+                // Se t < 0, o ponto mais próximo é p1. Se t > 1, é p2.
+                // Se 0 <= t <= 1, o ponto mais próximo está entre p1 e p2.
+                t = glm::clamp(t, 0.0f, 1.0f);
+
+                // Ponto mais próximo na linha (no plano XZ) ao centro da bola
+                glm::vec2 closest_point_on_segment = glm::vec2(segment.p1.x, segment.p1.z) + t * segment_vec;
+
+                // Vetor do centro da bola ao ponto mais próximo no segmento
+                glm::vec2 normal_vec_2d = glm::vec2(g_DebugBall.position.x, g_DebugBall.position.z) - closest_point_on_segment;
+
+                // Distância do centro da bola ao segmento
+                float distance = glm::length(normal_vec_2d);
+
+                // Se a distância for menor que o raio da bola, há colisão
+                if (distance < g_DebugBall.radius) 
+                {
+                    // A colisão real acontece quando distance < 0 (penetração)
+                    // Ou quando a bola tenta ultrapassar o limite.
+                    // Para "bola está no limite": A posição da bola é a coordenada do segmento.
+                    // A colisão para o movimento ocorre quando a bola *tenta* ir além.
+                    // Se você quer que a bola rebata *ao chegar* no limite, o teste é diferente.
+
+                    // VETOR NORMAL DA COLISÃO (no plano XZ)
+                    // Este vetor aponta do segmento para o centro da bola.
+                    glm::vec2 collision_normal_2d = glm::normalize(normal_vec_2d);
+
+                    // === AJUSTE DE POSIÇÃO PARA EVITAR PENETRAÇÃO ===
+                    float penetration_depth = g_DebugBall.radius - distance;
+                    // Move a bola para fora ao longo da normal da colisão.
+                    g_DebugBall.position.x += collision_normal_2d.x * penetration_depth;
+                    g_DebugBall.position.z += collision_normal_2d.y * penetration_depth; // Use .y do vec2 para o Z do mundo
+                    
+                    // Refletir a velocidade
+                    glm::vec2 velocity_2d = glm::vec2(g_DebugBall.velocity.x, g_DebugBall.velocity.z);
+                    
+                    // Componente da velocidade na direção da normal
+                    float dot_product = glm::dot(velocity_2d, collision_normal_2d);
+                    
+                    // Se a bola está se movendo na direção da normal (ou seja, penetrando)
+                    if (dot_product < 0) // Verifica se a bola está se movendo "contra" a parede
+                    {
+                        // Inverter a velocidade ao longo da normal e aplicar restituição
+                        glm::vec2 reflected_velocity_2d = velocity_2d - (2.0f * dot_product * collision_normal_2d);
+                        reflected_velocity_2d *= RESTITUTION_COEFF; // Perda de energia no quique
+
+                        g_DebugBall.velocity.x = reflected_velocity_2d.x;
+                        g_DebugBall.velocity.z = reflected_velocity_2d.y; // Cuidado aqui, glm::vec2.y é o Z do mundo
+
+                        // Opcional: Ajustar posição para evitar penetração
+                        // Isso empurra a bola para fora se ela penetrou ligeiramente.
+                        // g_DebugBall.position.x += collision_normal_2d.x * (COLLISION_EPSILON - distance);
+                        // g_DebugBall.position.z += collision_normal_2d.y * (COLLISION_EPSILON - distance);
+                    }
                 }
             }
 
@@ -1355,20 +1450,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         glfwSetWindowShouldClose(window, GL_TRUE);
     }
 
-    // Se o usuário apertar a tecla P, aplica uma velocidade inicial na bola de debug
-    if (key == GLFW_KEY_G && action == GLFW_PRESS)
-    {
-        // Reinicia a bola para uma posição conhecida acima do feltro
-        g_DebugBall.position = glm::vec3(0.0f, FELT_SURFACE_Y_ACTUAL + g_DebugBall.radius + 0.1f, 0.0f); // Um pouco acima do feltro
-        g_DebugBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Zera velocidade
-        
-        // Aplica um pequeno empurrão inicial para a frente ou para cima para testar gravidade
-        g_DebugBall.velocity.y = 2.0f; // Exemplo: um pequeno empurrão para cima para ver a bola cair
-        // g_DebugBall.velocity.z = -1.0f; // Ou um empurrão para frente no eixo Z
-        fprintf(stdout, "DEBUG: Bola empurrada! Pos: (%.2f, %.2f, %.2f) Vel: (%.2f, %.2f, %.2f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z, g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
-        fflush(stdout);
-    }
-
     // Se o usuário apertar a tecla P, utilizamos projeção perspectiva.
     if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
@@ -1483,28 +1564,36 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
         // Mover em X (esquerda/direita)
-        if (key == GLFW_KEY_LEFT) { // Seta para a esquerda
-            g_DebugBall.position.x -= g_BallStepSize;
+        if (key == GLFW_KEY_LEFT) 
+        {
+        g_DebugBall.velocity.z = 1.0f; // Ou um empurrão para frente no eixo Z
+        fprintf(stdout, "DEBUG: Bola empurrada! Pos: (%.2f, %.2f, %.2f) Vel: (%.2f, %.2f, %.2f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z, g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
+        fflush(stdout);
         }
-        if (key == GLFW_KEY_RIGHT) { // Seta para a direita
-            g_DebugBall.position.x += g_BallStepSize;
+
+        if (key == GLFW_KEY_RIGHT)
+        {
+        g_DebugBall.velocity.z = -1.0f; // Ou um empurrão para frente no eixo Z
+        fprintf(stdout, "DEBUG: Bola empurrada! Pos: (%.2f, %.2f, %.2f) Vel: (%.2f, %.2f, %.2f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z, g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
+        fflush(stdout);
         }
 
         // Mover em Y (cima/baixo) - Eixo vertical no seu mundo
-        if (key == GLFW_KEY_UP) { // Seta para cima
-            g_DebugBall.position.y += g_BallStepSize;
-        }
-        if (key == GLFW_KEY_DOWN) { // Seta para baixo
-            g_DebugBall.position.y -= g_BallStepSize;
+        if (key == GLFW_KEY_UP)
+        {
+        g_DebugBall.velocity.x = 1.0f; // Ou um empurrão para frente no eixo Z
+        fprintf(stdout, "DEBUG: Bola empurrada! Pos: (%.2f, %.2f, %.2f) Vel: (%.2f, %.2f, %.2f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z, g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
+        fflush(stdout);
         }
 
-        // Mover em Z (frente/trás) - Profundidade no seu mundo
-        if (key == GLFW_KEY_PAGE_UP) { // Page Up
-            g_DebugBall.position.z -= g_BallStepSize; // Mover para "frente" (Z negativo, se sua câmera olha para -Z)
+        if (key == GLFW_KEY_DOWN) 
+        {
+        g_DebugBall.velocity.x = -1.0f; // Ou um empurrão para frente no eixo Z
+        fprintf(stdout, "DEBUG: Bola empurrada! Pos: (%.2f, %.2f, %.2f) Vel: (%.2f, %.2f, %.2f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z, g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
+        fflush(stdout);
         }
-        if (key == GLFW_KEY_PAGE_DOWN) { // Page Down
-            g_DebugBall.position.z += g_BallStepSize; // Mover para "trás" (Z positivo)
-        }
+
+        
     }
     
 

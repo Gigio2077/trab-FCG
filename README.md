@@ -7,3 +7,12 @@ O que foi feito até agora:
 - Até agora tem uma mesa com a textura mapeada (de acordo com o vt) fonte: https://free3d.com/3d-model/pool-table-v1--600461.html
 
 - Bolas: https://www.turbosquid.com/3d-models/pool-balls-877865
+
+- Fisica basica do jogo : teste apertando tecla "G"
+
+- Modo Camera livre: tecla " C "
+
+- Teste de colisao com as bordas usando as teclas de seta para dar impulsos as bordas
+
+
+
