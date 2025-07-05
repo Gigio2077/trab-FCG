@@ -2,11 +2,6 @@
 //             Instituto de Informática
 //       Departamento de Informática Aplicada
 //
-//    INF01047 Fundamentos de Computação Gráfica
-//               Prof. Eduardo Gastal
-//
-//                   LABORATÓRIO 5
-//
 
 // Arquivos "headers" padrões de C podem ser incluídos em um
 // programa C++, sendo necessário somente adicionar o caractere
@@ -116,20 +111,20 @@ struct SceneObject
 // Usada aqui para depurar o movimento da bola.
 struct GameBall {
         glm::vec3 position;
-        glm::vec3 velocity; // <<=== ADICIONE ESTA LINHA
+        glm::vec3 velocity; 
         float radius;
         bool  active;
         std::string object_name;
         int   object_id;
+        int texture_unit_index;
+        int   shader_object_id;
     };
 
-// Variável global para a bola que vamos movimentar e depurar
-GameBall g_DebugBall; // Será a bola principal para depuração
+// Variável global para armazenar todas as bolas do jogo
+std::vector<GameBall> g_Balls;
 
 // Tamanho do passo para o movimento fixo da bola (em unidades do mundo virtual)
 float g_BallStepSize = 0.001f; // <<=== Comece com 0.1. Ajuste este valor conforme sua escala.
-
-
 
 
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
@@ -169,6 +164,11 @@ float g_FixedCamRestoreDistance = 3.5f; // Inicialize com um valor padrão ou o 
 float g_FixedCamRestorePhi = 0.0f;
 float g_FixedCamRestoreTheta = 0.0f;
 
+// Variáveis globais que armazenam a última posição do cursor do mouse, para
+// que possamos calcular quanto que o mouse se movimentou entre dois instantes
+// de tempo. Utilizadas no callback CursorPosCallback() abaixo.
+double g_LastCursorPosX, g_LastCursorPosY;
+
 // Variável que controla o tipo de projeção utilizada: perspectiva ou ortográfica.
 bool g_UsePerspectiveProjection = true;
 
@@ -183,6 +183,15 @@ const float BALL_Y_AXIS = -0.2667f; // Valor fornecido pelo usuário.
 const float BALL_VIRTUAL_RADIUS = 0.02625f; 
 
 
+// Constantes para o posicionamento das bolas no rack triangular
+const float RACK_TIP_Z_COORD = -0.60f; // Posição Z do centro da bola na ponta do triângulo (ajuste conforme necessário)
+const float BALL_DIAMETER = BALL_VIRTUAL_RADIUS * 2.0f; // Diâmetro da bola
+// Distância vertical entre os centros das bolas em linhas adjacentes (para um rack apertado)
+const float RACK_ROW_Z_OFFSET = BALL_DIAMETER * glm::sqrt(3.0f) / 2.0f;
+// Offset horizontal para o início de cada nova linha do rack
+const float RACK_ROW_X_OFFSET = BALL_DIAMETER / 2.0f;
+
+
 const float TABLE_X_MAX_BALL_CENTER = 0.52025000f; // Exemplo de valor obtido
 const float TABLE_X_MIN_BALL_CENTER = -0.52125000f; // Exemplo de valor obtido
 const float TABLE_Z_MIN_BALL_CENTER = -1.14725000f; // Exemplo de valor obtido
@@ -191,8 +200,6 @@ const float TABLE_Z_MAX_BALL_CENTER = 1.13725000f; // Exemplo de valor obtido
 
 // A altura da superfície do feltro da mesa será o centro da bola menos o raio da bola.
 const float FELT_SURFACE_Y_ACTUAL = BALL_Y_AXIS - BALL_VIRTUAL_RADIUS;
-
-
 
 // Constantes físicas
 const float GRAVITY = 9.8f; // Gravidade (em unidades/s^2, se unidades são metros, 9.8 m/s^2)
@@ -241,6 +248,7 @@ GLint g_projection_uniform;
 GLint g_object_id_uniform;
 GLint g_bbox_min_uniform;
 GLint g_bbox_max_uniform;
+GLint g_texture_index_uniform;
 
 GLuint lineVAO;
 GLuint lineVBO;
@@ -359,16 +367,59 @@ int main(int argc, char* argv[])
     }
 
 
+    float ballposx = -0.0020f;
+ 
+    float ballposz = 0.5680f;
+    
+    int i = 0;
 
-    // === INICIALIZAÇÃO DA BOLA DE DEPURACAO ===
-    g_DebugBall.radius = 0.06f; // Usa a constante de raio que já existe (0.02625f)
-    // Posição Y inicial: no feltro da mesa + o raio da bola para que ela não afunde
-    g_DebugBall.position = glm::vec3(-0.0020f, -0.2667f, 0.5680f); 
-    g_DebugBall.active = true;
-    g_DebugBall.object_name = "the_sphere"; // Reutiliza o modelo da esfera
-    g_DebugBall.object_id = SPHERE; // Usa o ID SPHERE (0) para renderização
-    g_DebugBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // <<=== INICIALIZA A VELOCIDADE DA BOLA DE DEBUG
+    // 1. Inicializa o vetor global de bolas
+    g_Balls.clear(); // Limpa o vetor se ele já contiver algo
 
+    // 2. Bola Branca (Cue Ball) - DECLARAÇÃO INDIVIDUAL
+    GameBall cueBall;
+    cueBall.radius = BALL_VIRTUAL_RADIUS;
+    cueBall.position = glm::vec3(-0.0020f, BALL_Y_AXIS, 0.5680f); // Posição inicial da bola branca
+    cueBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f);
+    cueBall.active = true;
+    cueBall.object_name = "the_sphere";
+    cueBall.shader_object_id = SPHERE;
+    cueBall.texture_unit_index = 0; // Unidade de textura para a bola branca
+    g_Balls.push_back(cueBall);
+
+
+    // === INICIALIZAÇÃO DAS BOLAS NUMERADAS (OBJECT BALLS) NO RACK ===
+    int ball_id_counter = 1; // Começa de 1 (para Bola 1, Bola 2, ..., Bola 15)
+
+    for (int row = 0; row < 5; ++row) // O rack triangular tem 5 linhas
+    {
+        for (int col = 0; col <= row; ++col) // Número de bolas em cada linha (1, 2, 3, 4, 5)
+        {
+            if (ball_id_counter > 15) break; // Garante que não adicionamos mais de 15 bolas
+
+            GameBall objectBall;
+            objectBall.radius = BALL_VIRTUAL_RADIUS;
+            objectBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Começa parada
+            objectBall.active = true;
+            objectBall.object_name = "the_sphere";
+            objectBall.shader_object_id = SPHERE; // Todas as bolas são modelos SPHERE
+
+            // Calcula a posição Z (profundidade) da bola na linha atual do rack
+            float current_z = RACK_TIP_Z_COORD - (float)row * RACK_ROW_Z_OFFSET;
+            // Calcula a posição X (horizontal) da bola na linha atual do rack
+            float current_x = (float)col * BALL_DIAMETER - (float)row * RACK_ROW_X_OFFSET;
+
+            objectBall.position = glm::vec3(current_x, BALL_Y_AXIS, current_z);
+
+            // Atribui o ID da textura: Bola 1 usa TextureImage[1], Bola 2 usa TextureImage[2], etc.
+            objectBall.texture_unit_index = ball_id_counter; // <<=== TEXTURA CORRETA
+            g_Balls.push_back(objectBall);
+
+            ball_id_counter++; // Incrementa para a próxima bola numerada
+        }
+        if (ball_id_counter > 15) break; // Se todas as 15 bolas já foram adicionadas, sai do loop externo também
+    }
+    
     // === INICIALIZAÇÃO DOS SEGMENTOS DE TABELA ===
     // Segmento 1
     g_TableSegments.push_back({glm::vec3(TABLE_X_MAX_BALL_CENTER, BALL_Y_AXIS, -0.0730f), glm::vec3(TABLE_X_MAX_BALL_CENTER, BALL_Y_AXIS, -1.0480f)});
@@ -396,11 +447,6 @@ int main(int argc, char* argv[])
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
-
-    
-
-
-
 
     GLint maxTextures;
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTextures);
@@ -435,8 +481,6 @@ int main(int argc, char* argv[])
         lastFrameTime = currentFrameTime;
         //fprintf(stdout, "DEBUG: DeltaTime: %.4f\n", deltaTime); // <<=== VERIFICA SE DELTATIME É NÃO-ZERO
         
-
-
         // Linhas auxiliares
         // Linha de exemplo: de (-1,0,0) até (1,0,0)
         float line_vertices[] = {
@@ -462,138 +506,85 @@ int main(int argc, char* argv[])
 
         glBindVertexArray(0);
 
-
-
-
-
-
-        if (g_DebugBall.active)
+        // === LÓGICA DE FÍSICA PARA TODAS AS BOLAS ===
+        for (auto& ball : g_Balls) // <<=== LOOP SOBRE TODAS AS BOLAS
         {
+            if (!ball.active) continue; // Pula bolas que não estão ativas (caíram na caçapa)
+
             // 1. Aplicar gravidade à velocidade Y
-            g_DebugBall.velocity.y -= GRAVITY * deltaTime;
+            ball.velocity.y -= GRAVITY * deltaTime;
 
             // 2. Atualizar a posição da bola com base na velocidade
-            g_DebugBall.position += g_DebugBall.velocity * deltaTime;
+            ball.position += ball.velocity * deltaTime;
 
             // 3. Aplicar atrito (desaceleração geral)
-            g_DebugBall.velocity.x *= BALL_FRICTION_FACTOR;
-            g_DebugBall.velocity.z *= BALL_FRICTION_FACTOR; // Apenas nos eixos XZ, para simular atrito no plano
-            // Se a velocidade for muito baixa, pare a bola completamente para evitar arrastos infinitos
-            if (glm::length(glm::vec2(g_DebugBall.velocity.x, g_DebugBall.velocity.z)) < 0.01f) {
-                g_DebugBall.velocity.x = 0.0f;
-                g_DebugBall.velocity.z = 0.0f;
+            ball.velocity.x *= BALL_FRICTION_FACTOR;
+            ball.velocity.z *= BALL_FRICTION_FACTOR;
+            if (glm::length(glm::vec2(ball.velocity.x, ball.velocity.z)) < VELOCITY_STOP_THRESHOLD) {
+                ball.velocity.x = 0.0f;
+                ball.velocity.z = 0.0f;
             }
 
-
             // 4. Teste de Colisão com o Feltro da Mesa (Chão)
-            // A colisão ocorre quando a parte de baixo da bola atinge a superfície do feltro.
-            // A superfície do feltro está em FELT_SURFACE_Y_ACTUAL.
-            if (g_DebugBall.position.y - g_DebugBall.radius < FELT_SURFACE_Y_ACTUAL)
+            if (ball.position.y - ball.radius < FELT_SURFACE_Y_ACTUAL)
             {
-                // Ajustar a posição para que a bola não afunde no feltro
-                g_DebugBall.position.y = FELT_SURFACE_Y_ACTUAL + g_DebugBall.radius;
-
-                // Inverter a velocidade Y para simular o quique
-                // Multiplicamos pelo coeficiente de restituição para perder energia no quique
-                g_DebugBall.velocity.y *= -1.0f * RESTITUTION_COEFF;
-
-                // Opcional: Se o quique é muito pequeno, zere a velocidade Y para a bola parar de quicar
-                if (glm::abs(g_DebugBall.velocity.y) < 0.1f) { // Se a velocidade vertical for muito baixa
-                    g_DebugBall.velocity.y = 0.0f;
-                    // E ajuste a posição para garantir que está perfeitamente no feltro se ela parou
-                    g_DebugBall.position.y = FELT_SURFACE_Y_ACTUAL + g_DebugBall.radius;
+                ball.position.y = FELT_SURFACE_Y_ACTUAL + ball.radius;
+                ball.velocity.y *= -1.0f * RESTITUTION_COEFF;
+                if (glm::abs(ball.velocity.y) < VELOCITY_STOP_THRESHOLD) {
+                    ball.velocity.y = 0.0f;
+                    ball.position.y = FELT_SURFACE_Y_ACTUAL + ball.radius;
                 }
             }
 
-            
-
+            // === TESTE DE COLISÃO BOLA-CAÇAPA ===
+            /*for (const auto& pocket : g_Pockets)
+            {
+                float distance = glm::length(ball.position - pocket.position);
+                if (distance <= (ball.radius + pocket.radius))
+                {
+                    ball.active = false;
+                    ball.position = glm::vec3(1000.0f, 1000.0f, 1000.0f); // Move para longe
+                    ball.velocity = glm::vec3(0.0f, 0.0f, 0.0f);
+                    fprintf(stdout, "DEBUG: Bola caiu na cacapa! Pos: (%.4f, %.4f, %.4f)\n", ball.position.x, ball.position.y, ball.position.z);
+                    fflush(stdout);
+                    break; // Sai do loop de caçapas
+                }
+            }*/
 
             // === TESTE DE COLISÃO COM AS TABELAS (SEGMENTOS DE RETA) ===
-
             for (const auto& segment : g_TableSegments)
             {
-                // As coordenadas do segmento já representam a posição do centro da bola no limite.
-                // O teste é se a bola tentou ultrapassar essa linha.
-                
-                // As tabelas são verticais. A colisão será principalmente nos eixos X ou Z.
-                // As coordenadas Y do segmento são BALL_Y_AXIS, que é o centro da bola.
-                // A altura da bola é fixa em Y, mas a colisão é no plano XZ.
-
-                // Vamos considerar cada segmento como uma "parede" (uma linha) no plano XZ.
-                // p1 e p2 são os pontos do segmento.
-
-                // Vetor que representa o segmento de reta
+                // ... (sua lógica de colisão esfera-segmento, substitua g_DebugBall por ball) ...
+                // Exemplo:
                 glm::vec2 segment_vec = glm::vec2(segment.p2.x - segment.p1.x, segment.p2.z - segment.p1.z);
-                // Vetor da posição da bola ao ponto inicial do segmento
-                glm::vec2 ball_to_p1_vec = glm::vec2(g_DebugBall.position.x - segment.p1.x, g_DebugBall.position.z - segment.p1.z);
-
-                // Projetamos o vetor da bola no segmento (para encontrar o ponto mais próximo no segmento infinito)
+                glm::vec2 ball_to_p1_vec = glm::vec2(ball.position.x - segment.p1.x, ball.position.z - segment.p1.z);
                 float t = glm::dot(ball_to_p1_vec, segment_vec) / glm::dot(segment_vec, segment_vec);
-
-                // Clampear 't' para garantir que o ponto mais próximo esteja DENTRO do segmento de reta.
-                // Se t < 0, o ponto mais próximo é p1. Se t > 1, é p2.
-                // Se 0 <= t <= 1, o ponto mais próximo está entre p1 e p2.
                 t = glm::clamp(t, 0.0f, 1.0f);
-
-                // Ponto mais próximo na linha (no plano XZ) ao centro da bola
                 glm::vec2 closest_point_on_segment = glm::vec2(segment.p1.x, segment.p1.z) + t * segment_vec;
-
-                // Vetor do centro da bola ao ponto mais próximo no segmento
-                glm::vec2 normal_vec_2d = glm::vec2(g_DebugBall.position.x, g_DebugBall.position.z) - closest_point_on_segment;
-
-                // Distância do centro da bola ao segmento
+                glm::vec2 normal_vec_2d = glm::vec2(ball.position.x, ball.position.z) - closest_point_on_segment;
                 float distance = glm::length(normal_vec_2d);
 
-                // Se a distância for menor que o raio da bola, há colisão
-                if (distance < g_DebugBall.radius) 
+                if (distance < ball.radius)
                 {
-                    // A colisão real acontece quando distance < 0 (penetração)
-                    // Ou quando a bola tenta ultrapassar o limite.
-                    // Para "bola está no limite": A posição da bola é a coordenada do segmento.
-                    // A colisão para o movimento ocorre quando a bola *tenta* ir além.
-                    // Se você quer que a bola rebata *ao chegar* no limite, o teste é diferente.
-
-                    // VETOR NORMAL DA COLISÃO (no plano XZ)
-                    // Este vetor aponta do segmento para o centro da bola.
                     glm::vec2 collision_normal_2d = glm::normalize(normal_vec_2d);
+                    float penetration_depth = ball.radius - distance;
+                    ball.position.x += collision_normal_2d.x * penetration_depth;
+                    ball.position.z += collision_normal_2d.y * penetration_depth;
 
-                    // === AJUSTE DE POSIÇÃO PARA EVITAR PENETRAÇÃO ===
-                    float penetration_depth = g_DebugBall.radius - distance;
-                    // Move a bola para fora ao longo da normal da colisão.
-                    g_DebugBall.position.x += collision_normal_2d.x * penetration_depth;
-                    g_DebugBall.position.z += collision_normal_2d.y * penetration_depth; // Use .y do vec2 para o Z do mundo
-                    
-                    // Refletir a velocidade
-                    glm::vec2 velocity_2d = glm::vec2(g_DebugBall.velocity.x, g_DebugBall.velocity.z);
-                    
-                    // Componente da velocidade na direção da normal
+                    glm::vec2 velocity_2d = glm::vec2(ball.velocity.x, ball.velocity.z);
                     float dot_product = glm::dot(velocity_2d, collision_normal_2d);
-                    
-                    // Se a bola está se movendo na direção da normal (ou seja, penetrando)
-                    if (dot_product < 0) // Verifica se a bola está se movendo "contra" a parede
+
+                    if (dot_product < 0)
                     {
-                        // Inverter a velocidade ao longo da normal e aplicar restituição
                         glm::vec2 reflected_velocity_2d = velocity_2d - (2.0f * dot_product * collision_normal_2d);
-                        reflected_velocity_2d *= RESTITUTION_COEFF; // Perda de energia no quique
-
-                        g_DebugBall.velocity.x = reflected_velocity_2d.x;
-                        g_DebugBall.velocity.z = reflected_velocity_2d.y; // Cuidado aqui, glm::vec2.y é o Z do mundo
-
-                        // Opcional: Ajustar posição para evitar penetração
-                        // Isso empurra a bola para fora se ela penetrou ligeiramente.
-                        // g_DebugBall.position.x += collision_normal_2d.x * (COLLISION_EPSILON - distance);
-                        // g_DebugBall.position.z += collision_normal_2d.y * (COLLISION_EPSILON - distance);
+                        reflected_velocity_2d *= RESTITUTION_COEFF;
+                        ball.velocity.x = reflected_velocity_2d.x;
+                        ball.velocity.z = reflected_velocity_2d.y;
                     }
                 }
             }
-
-            // === IMPRIMIR POSIÇÃO E VELOCIDADE DA BOLA DE DEBUG ===
-            fprintf(stdout, "DEBUG BOLA: Pos: (%.4f, %.4f, %.4f) Vel: (%.4f, %.4f, %.4f)\n",
-                    g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z,
-                    g_DebugBall.velocity.x, g_DebugBall.velocity.y, g_DebugBall.velocity.z);
-            fflush(stdout);
         }
-
+    
 
         glm::vec4 camera_position_c;  // Ponto "c", centro da câmera
         glm::vec4 camera_lookat_l;    // Ponto "l", para onde a câmera (look-at) estará sempre olhando
@@ -692,19 +683,11 @@ int main(int argc, char* argv[])
 
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
 
-
-
         // Enviamos as matrizes "view" e "projection" para a placa de vídeo
         // (GPU). Veja o arquivo "shader_vertex.glsl", onde estas são
         // efetivamente aplicadas em todos os pontos.
         glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
-
-
-
-    
-
-
 
         // Desenhamos o modelo do plano
         model = Matrix_Translate(0.0f,-1.0f,0.0f)
@@ -724,25 +707,22 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, TABLE);
         DrawVirtualObject("10523_Pool_Table_v1_SG");
 
-        
-        if (g_DebugBall.active) // Só desenha se a bola estiver ativa
+
+    
+        // === DESENHAMOS TODAS AS BOLAS ===
+        for (const auto& ball : g_Balls) // <<=== LOOP SOBRE TODAS AS BOLAS
         {
-            glm::mat4 model_debug_ball = Matrix_Translate(g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z)
-                                       * Matrix_Scale(g_DebugBall.radius, g_DebugBall.radius, g_DebugBall.radius)
-                                       * Matrix_Rotate_X(-M_PI/2.0f); // Mantenha a rotação se o modelo da esfera estiver deitado
-            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model_debug_ball));
-            glUniform1i(g_object_id_uniform, g_DebugBall.object_id);
-            DrawVirtualObject(g_DebugBall.object_name.c_str());
+            if (!ball.active) continue; // Só desenha se a bola estiver ativa
+
+            glm::mat4 model_ball = Matrix_Translate(ball.position.x, ball.position.y, ball.position.z)
+                                * Matrix_Scale(ball.radius, ball.radius, ball.radius)
+                                * Matrix_Rotate_X(-M_PI/2.0f);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model_ball));
+            glUniform1i(g_object_id_uniform, ball.shader_object_id); // Usa o ID do shader da bola (SPHERE)
+            glUniform1i(g_texture_index_uniform, ball.texture_unit_index); // <<=== ENVIA O ÍNDICE DA TEXTURA
+            DrawVirtualObject(ball.object_name.c_str());
         }
- 
-
-
-        // Imprimimos na tela os ângulos de Euler que controlam a rotação do
-        // terceiro cubo.
-        //TextRendering_ShowEulerAngles(window);
-
-        // Imprimimos na informação sobre a matriz de projeção sendo utilizada.
-        //TextRendering_ShowProjection(window);
+    
 
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
@@ -900,6 +880,7 @@ void LoadShadersFromFiles()
     g_object_id_uniform  = glGetUniformLocation(g_GpuProgramID, "object_id"); // Variável "object_id" em shader_fragment.glsl
     g_bbox_min_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_min");
     g_bbox_max_uniform   = glGetUniformLocation(g_GpuProgramID, "bbox_max");
+    g_texture_index_uniform = glGetUniformLocation(g_GpuProgramID, "texture_index_uniform");
 
     // Variáveis em "shader_fragment.glsl" para acesso das imagens de textura
     glUseProgram(g_GpuProgramID);
@@ -1313,11 +1294,6 @@ void FramebufferSizeCallback(GLFWwindow* window, int width, int height)
     g_ScreenRatio = (float)width / height;
 }
 
-// Variáveis globais que armazenam a última posição do cursor do mouse, para
-// que possamos calcular quanto que o mouse se movimentou entre dois instantes
-// de tempo. Utilizadas no callback CursorPosCallback() abaixo.
-double g_LastCursorPosX, g_LastCursorPosY;
-
 // Função callback chamada sempre que o usuário aperta algum dos botões do mouse
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
@@ -1440,8 +1416,6 @@ void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 // tecla do teclado. Veja http://www.glfw.org/docs/latest/input_guide.html#input_key
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 {
-
-
     // ======================
     // Não modifique este loop! Ele é utilizando para correção automatizada dos
     // laboratórios. Deve ser sempre o primeiro comando desta função KeyCallback().
@@ -1481,7 +1455,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         fprintf(stdout,"Shaders recarregados!\n");
         fflush(stdout);
     }
-
 
     // Se o usuário apertar a tecla C, alterna o modo de câmera.
     if (key == GLFW_KEY_C && action == GLFW_PRESS)
@@ -1566,7 +1539,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
 
 
-
+    /*
     if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
         // Mover em X (esquerda/direita)
@@ -1608,7 +1581,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         }
 
         
-    }
+    }*/
     
 
     fflush(stdout); // Garante que a mensagem seja exibida
@@ -1630,8 +1603,7 @@ void TextRendering_ShowModelViewProjection(
     glm::mat4 projection,
     glm::mat4 view,
     glm::mat4 model,
-    glm::vec4 p_model
-)
+    glm::vec4 p_model)
 {
     if ( !g_ShowInfoText )
         return;
@@ -1922,9 +1894,6 @@ void PrintObjModelInfo(ObjModel* model, bool showAllInfo)
     }
   }
 }
-
-
-
 
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
 // vim: set spell spelllang=pt_br :

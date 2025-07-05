@@ -18,6 +18,9 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+//Texturas das bolas
+uniform int texture_index_uniform;
+
 // Identificador que define qual objeto está sendo desenhado no momento
 #define SPHERE 0
 #define PLANE  1
@@ -67,80 +70,90 @@ void main()
     float U = 0.0;
     float V = 0.0;
 
-vec3 Kd0;
+    vec3 Kd0;
 
-if (object_id == SPHERE){
-    vec3 bbox_center = ((bbox_min + bbox_max) * 0.5).xyz;
-    vec3 p = position_model.xyz;
-
-    vec3 p_rel = p - bbox_center;
-
-    // p_rep eh o ponto relativo ao centro da esfera
-    // e rho eh o raio da esfera
-    float rho = length(p_rel);
-
-    // usamos o ponto relativo e o raio para determinar os angulos phi e theta
-    // fazendo a inversa da fórmula aprendida em aula:
-    // 𝐩𝑥 = 𝜌 cos𝜑 sin 𝜃
-    // 𝐩𝑦 = 𝜌 sin 𝜑
-    // 𝐩𝑧 = 𝜌 cos𝜑 cos 𝜃
-
-    // 𝐩𝑦 = 𝜌 sin 𝜑 -> 𝜑 = asin( 𝐩𝑦 / 𝜌 )
-    float phi = asin(p_rel.y / rho);
-
-    // cálculo de θ usando a função atan2 para obter o ângulo correto no plano xz
-    float theta = atan(p_rel.x, p_rel.z);
-
-    U = 0.5 + theta / (2.0 * M_PI);
-    V = 0.5 + phi / M_PI;
+    if (object_id == SPHERE){
         
-    Kd0 = texture(TextureImage[13], vec2(U,V)).rgb;
-}
+        vec3 bbox_center = ((bbox_min + bbox_max) * 0.5).xyz;
+        vec3 p = position_model.xyz;
+
+        vec3 p_rel = p - bbox_center;
+
+        // p_rep eh o ponto relativo ao centro da esfera
+        // e rho eh o raio da esfera
+        float rho = length(p_rel);
+
+        // usamos o ponto relativo e o raio para determinar os angulos phi e theta
+        // fazendo a inversa da fórmula aprendida em aula:
+        // 𝐩𝑥 = 𝜌 cos𝜑 sin 𝜃
+        // 𝐩𝑦 = 𝜌 sin 𝜑
+        // 𝐩𝑧 = 𝜌 cos𝜑 cos 𝜃
+
+        // 𝐩𝑦 = 𝜌 sin 𝜑 -> 𝜑 = asin( 𝐩𝑦 / 𝜌 )
+        float phi = asin(p_rel.y / rho);
+
+        // cálculo de θ usando a função atan2 para obter o ângulo correto no plano xz
+        float theta = atan(p_rel.x, p_rel.z);
+
+        U = 0.5 + theta / (2.0 * M_PI);
+        V = 0.5 + phi / M_PI;
+        
+        // === NOVO: Verificação para a Bola Branca (texture_unit_index = 0) ===
+        if (texture_index_uniform == 0) // Se for a bola branca (ID 0)
+        {
+            Kd0 = vec3(1.0f, 1.0f, 1.0f); // Cor branca sólida
+        }
+        else // Se for uma bola numerada (texture_unit_index > 0)
+        {
+            // ... (sua lógica existente para cálculo de U e V) ...
+            Kd0 = texture(TextureImage[texture_index_uniform], vec2(U,V)).rgb; // Usa a textura correspondente ao número da bola
+        }
+    }
 
 
 
-else if (object_id == PLANE) // <<=== Este é o ID 1, para o CHÃO
-{
-    // === AQUI VOCÊ DEFINE A COR SÓLIDA PARA O CHÃO ===
-    Kd0 = vec3(0.5f, 0.5f, 0.5f); // Exemplo: Cinza sólido. Ajuste os valores RGB (Red, Green, Blue) entre 0.0f e 1.0f.
-    // Se você quisesse um marrom: Kd0 = vec3(0.6f, 0.4f, 0.2f);
-}
+    else if (object_id == PLANE) // <<=== Este é o ID 1, para o CHÃO
+    {
+        // === AQUI VOCÊ DEFINE A COR SÓLIDA PARA O CHÃO ===
+        Kd0 = vec3(0.5f, 0.5f, 0.5f); // Exemplo: Cinza sólido. Ajuste os valores RGB (Red, Green, Blue) entre 0.0f e 1.0f.
+        // Se você quisesse um marrom: Kd0 = vec3(0.6f, 0.4f, 0.2f);
+    }
 
 
-else if (object_id == TABLE)
-{
-    Kd0 = texture(TextureImage[0], texcoords).rgb;
-}
-else
-{
-    Kd0 = texture(TextureImage[0], vec2(U,V)).rgb;
-}
-    vec3 Kd = Kd0;                // Difuso (já obtido da textura)
-    vec3 Ks = vec3(0.3);             // Especular (ajuste conforme necessário)
-    float shininess = 64.0;          // Expoente de Phong (ajuste para brilho)
+    else if (object_id == TABLE)
+    {
+        Kd0 = texture(TextureImage[0], texcoords).rgb;
+    }
+    else
+    {
+        Kd0 = texture(TextureImage[0], vec2(U,V)).rgb;
+    }
+        vec3 Kd = Kd0;                // Difuso (já obtido da textura)
+        vec3 Ks = vec3(0.3);             // Especular (ajuste conforme necessário)
+        float shininess = 64.0;          // Expoente de Phong (ajuste para brilho)
 
-    // Iluminação ambiente
-    vec3 Ia = vec3(1.0);             // Intensidade da luz ambiente (branca)
-    vec3 ambient = 0.1 * Kd;         // Termo ambiente final
+        // Iluminação ambiente
+        vec3 Ia = vec3(1.0);             // Intensidade da luz ambiente (branca)
+        vec3 ambient = 0.1 * Kd;         // Termo ambiente final
 
-    // Iluminação difusa (Lambert)
-    float lambert = max(dot(n, l), 0.0);
-    vec3 Id = vec3(1.0);             // Intensidade da luz difusa (branca)
-    vec3 diffuse = lambert * Kd * Id;
+        // Iluminação difusa (Lambert)
+        float lambert = max(dot(n, l), 0.0);
+        vec3 Id = vec3(1.0);             // Intensidade da luz difusa (branca)
+        vec3 diffuse = lambert * Kd * Id;
 
-    // Iluminação especular (Phong)
-    vec3 r = reflect(-l.xyz, n.xyz); // Vetor refletido
-    float spec = pow(max(dot(v.xyz, r), 0.0), shininess);
-    vec3 Is = vec3(1.0);             // Intensidade da luz especular
-    vec3 specular = Ks * spec * Is;
+        // Iluminação especular (Phong)
+        vec3 r = reflect(-l.xyz, n.xyz); // Vetor refletido
+        float spec = pow(max(dot(v.xyz, r), 0.0), shininess);
+        vec3 Is = vec3(1.0);             // Intensidade da luz especular
+        vec3 specular = Ks * spec * Is;
 
-    // Cor final
-    color.rgb = ambient + diffuse + specular;
-    
-    color.a = 1;
+        // Cor final
+        color.rgb = ambient + diffuse + specular;
+        
+        color.a = 1;
 
-    // Cor final com correção gamma, considerando monitor sRGB.
-    // Veja https://en.wikipedia.org/w/index.php?title=Gamma_correction&oldid=751281772#Windows.2C_Mac.2C_sRGB_and_TV.2Fvideo_standard_gammas
-    color.rgb = pow(color.rgb, vec3(1.0,1.0,1.0)/2.2);
+        // Cor final com correção gamma, considerando monitor sRGB.
+        // Veja https://en.wikipedia.org/w/index.php?title=Gamma_correction&oldid=751281772#Windows.2C_Mac.2C_sRGB_and_TV.2Fvideo_standard_gammas
+        color.rgb = pow(color.rgb, vec3(1.0,1.0,1.0)/2.2);
 } 
 
