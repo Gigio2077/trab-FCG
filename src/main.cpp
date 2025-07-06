@@ -80,6 +80,7 @@ void TextRendering_ShowModelViewProjection(GLFWwindow* window, glm::mat4 project
 void TextRendering_ShowEulerAngles(GLFWwindow* window);
 void TextRendering_ShowProjection(GLFWwindow* window);
 void TextRendering_ShowFramesPerSecond(GLFWwindow* window);
+void TextRendering_ShowShotPower(GLFWwindow* window);
 
 // Funções callback para comunicação com o sistema operacional e interação do
 // usuário. Veja mais comentários nas definições das mesmas, abaixo.
@@ -216,6 +217,19 @@ const float RESTITUTION_COEFF = 0.8f; // Coeficiente de restituição (0.0 para 
 const float BALL_FRICTION_FACTOR = 0.99f; // Fator de atrito para desacelerar a bola (por frame)
 const float COLLISION_EPSILON = 0.001f; // Pequeno valor para evitar problemas de "colar" na parede.
 const float VELOCITY_STOP_THRESHOLD = 0.01f; // Limiar para zerar velocidade quando muito baixa.
+
+
+
+// Variáveis para o sistema de barra de força (Power Shot)
+bool g_P_KeyHeld = false; // true se a tecla 'P' está sendo mantida pressionada
+double g_P_PressStartTime = 0.0; // Tempo em que a tecla 'P' foi pressionada pela primeira vez
+float g_CurrentShotPowerPercentage = 0.0f; // Força atual da tacada em porcentagem (0.0 a 100.0)
+float g_MaxShotChargeTime = 2.0f; // Tempo (em segundos) para carregar 100% da força
+float g_ShotPowerPingPongDirection = 1.0f; // Direção do "ping-pong": 1.0 para carregando (0->100), -1.0 para descarregando (100->0)
+
+// Constantes para o mapeamento da porcentagem para a força real aplicada
+const float g_MinShotPowerMagnitude = 1.0f; // Força mínima do impulso (mesmo para um toque rápido)
+const float g_MaxShotPowerMagnitude = 10.0f; // Força máxima do impulso
 
 
 
@@ -530,11 +544,32 @@ int main(int argc, char* argv[])
         lastFrameTime = currentFrameTime;
         //fprintf(stdout, "DEBUG: DeltaTime: %.4f\n", deltaTime); // Para depuração, se necessário
         
-    
+        if (g_P_KeyHeld)
+        {
+            // Calcula o progresso com base no tempo decorrido desde o início do pressionamento
+            float time_elapsed_since_press = (float)(glfwGetTime() - g_P_PressStartTime);
+            float progress_ratio = time_elapsed_since_press / g_MaxShotChargeTime;
+
+            // Atualiza a porcentagem da força com o efeito "ping-pong"
+            g_CurrentShotPowerPercentage += g_ShotPowerPingPongDirection * (100.0f / g_MaxShotChargeTime) * deltaTime;
+            
+            // Inverte a direção do ping-pong se atingir os limites
+            if (g_CurrentShotPowerPercentage >= 100.0f) {
+                g_CurrentShotPowerPercentage = 100.0f; // Garante que não ultrapasse 100%
+                g_ShotPowerPingPongDirection = -1.0f; // Começa a descarregar
+            } else if (g_CurrentShotPowerPercentage <= 0.0f) {
+                g_CurrentShotPowerPercentage = 0.0f; // Garante que não vá abaixo de 0%
+                g_ShotPowerPingPongDirection = 1.0f; // Começa a carregar novamente
+            }
+            //fprintf(stdout, "DEBUG: Forca: %.2f%%\n", g_CurrentShotPowerPercentage); fflush(stdout);
+        }
+
+
+        
 
 
         // === LÓGICA DE FÍSICA PARA TODAS AS BOLAS ===
-        for (size_t i = 0; i < g_Balls.size(); ++i) // <<=== MUDANÇA AQUI: Loop baseado em índice 'i'
+        for (size_t i = 0; i < g_Balls.size(); ++i) 
         {
             GameBall& ball_A = g_Balls[i]; // Bola atual (referenciada como ball_A)
             if (!ball_A.active) continue; // Pula bolas que não estão ativas (caíram na caçapa)
@@ -862,6 +897,10 @@ int main(int argc, char* argv[])
                 glBindVertexArray(0);
             }
         }
+
+
+        // === CHAMADA PARA EXIBIR PORCENTAGEM DE FORÇA NA TELA ===
+        TextRendering_ShowShotPower(window);
 
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
@@ -1608,30 +1647,46 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         fflush(stdout);
     }
 
+    // === Lógica para a tecla P (Sistema de Força) ===
     if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
-
-        if (!g_Balls.empty() && g_Balls[0].active) // Garante que há a bola branca e está ativa
+        // Só permite iniciar o carregamento da força se o modo de mira estiver ativo
+        // e a bola branca estiver ativa.
+        if (g_AimingMode && !g_Balls.empty() && g_Balls[0].active )
         {
-            if (g_AimingMode) // Se o modo de mira estiver ATIVO, a tacada usa o ângulo de mira
-            {
-                // Desativa o modo de mira após a tacada
-                //g_AimingMode = false;
-                //fprintf(stdout, "DEBUG: Modo de Mira DESATIVADO (Tacada!).\n");
+            g_P_KeyHeld = true; // Sinaliza que 'P' está pressionada
+            g_P_PressStartTime = glfwGetTime(); // Registra o tempo de início
+            g_CurrentShotPowerPercentage = 0.0f; // Começa a força em 0%
+            g_ShotPowerPingPongDirection = 1.0f; // Começa carregando (incrementando)
+            fprintf(stdout, "DEBUG: Carregando Forca...\n");
+        }
+        fflush(stdout);
+    }
 
-                // Calcula o vetor de direção da tacada a partir do g_AimingAngle
-                glm::vec3 shoot_direction = glm::vec3(glm::sin(g_AimingAngle), 0.0f, glm::cos(g_AimingAngle));
-                shoot_direction = glm::normalize(shoot_direction); // Normaliza para ter comprimento 1
 
-                // Aplica uma velocidade à bola branca na direção da mira
-                float shot_power = 5.0f; // <<=== FORÇA DA TACADA. Ajuste este valor!
-                g_Balls[0].velocity = shoot_direction * shot_power;
+    
+    if (key == GLFW_KEY_P && action == GLFW_RELEASE)
+    {
+        if (g_P_KeyHeld) // Só dispara se 'P' estava de fato sendo pressionada
+        {
+            g_P_KeyHeld = false; // Sinaliza que 'P' não está mais sendo pressionada
+            fprintf(stdout, "DEBUG: Modo de Mira DESATIVADO (Tacada!).\n");
 
-                fprintf(stdout, "DEBUG: Tacada! Angulo: %.2f, Direcao: (%.2f, %.2f, %.2f), Velocidade: (%.2f, %.2f, %.2f)\n",
-                        g_AimingAngle, shoot_direction.x, shoot_direction.y, shoot_direction.z,
+            // Calcula a força final com base na porcentagem atual
+            float shot_power_magnitude = g_MinShotPowerMagnitude + (g_MaxShotPowerMagnitude - g_MinShotPowerMagnitude) * (g_CurrentShotPowerPercentage / 100.0f);
+
+            // Calcula o vetor de direção da tacada a partir do g_AimingAngle
+            glm::vec3 shoot_direction = glm::vec3(glm::sin(g_AimingAngle), 0.0f, glm::cos(g_AimingAngle));
+            shoot_direction = glm::normalize(shoot_direction); // Normaliza para ter comprimento 1
+
+            // Aplica a velocidade à bola branca
+            if (!g_Balls.empty() && g_Balls[0].active) {
+                g_Balls[0].velocity = shoot_direction * shot_power_magnitude;
+
+                fprintf(stdout, "DEBUG: Tacada! Forca %.2f%%. Vel: (%.2f, %.2f, %.2f)\n",
+                        g_CurrentShotPowerPercentage,
                         g_Balls[0].velocity.x, g_Balls[0].velocity.y, g_Balls[0].velocity.z);
             }
-            
             fflush(stdout);
         }
     }
@@ -1846,6 +1901,42 @@ void TextRendering_ShowProjection(GLFWwindow* window)
     else
         TextRendering_PrintString(window, "Orthographic", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
 }
+
+
+// Escrevemos na tela a porcentagem da força da tacada.
+void TextRendering_ShowShotPower(GLFWwindow* window)
+{
+    // Verifica se o texto informativo global está habilitado (se você usa g_ShowInfoText para a UI)
+    if ( !g_ShowInfoText )
+        return;
+
+    // Só exibe o texto da força se a tecla 'P' estiver sendo mantida pressionada
+    // (A variável g_P_KeyHeld é global e é atualizada no KeyCallback).
+    if ( !g_P_KeyHeld )
+        return;
+
+    // Variáveis estáticas para o buffer do texto. Elas mantêm seu valor entre as chamadas da função.
+    static char buffer[50]; // Buffer para formatar a string de texto (ex: "FORCA: 85.3%")
+    static int  numchars = 0; // Número de caracteres na string formatada
+
+    // A porcentagem de força (g_CurrentShotPowerPercentage) é atualizada a cada frame
+    // no loop principal (onde g_P_KeyHeld é true). Aqui, apenas formatamos e imprimimos.
+    numchars = snprintf(buffer, 50, "FORCA: %.1f%%", g_CurrentShotPowerPercentage);
+    
+    // Posicionamento na tela usando coordenadas NDC (Normalized Device Coordinates).
+    // lineheight e charwidth são usados para um posicionamento responsivo.
+    float lineheight = TextRendering_LineHeight(window);
+    float charwidth = TextRendering_CharWidth(window); 
+
+    // Posicionamos no canto inferior esquerdo ou onde preferir.
+    // Exemplo: 0.5f para mais à direita, -0.8f para perto do fundo.
+    // Você pode ajustar X e Y para centralizar ou posicionar melhor.
+    TextRendering_PrintString(window, buffer, 0.5f, -0.8f, 1.2f); // Exemplo: Posição ajustada
+}
+
+
+
+
 
 // Escrevemos na tela o número de quadros renderizados por segundo (frames per
 // second).
