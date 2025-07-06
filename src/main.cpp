@@ -132,6 +132,8 @@ std::vector<GameBall> g_Balls;
 float g_BallStepSize = 0.002f; // <<=== Comece com 0.1. Ajuste este valor conforme sua escala.
 
 GameBall g_DebugBall;
+
+
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
 // A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
 // (map).  Veja dentro da função BuildTrianglesAndAddToVirtualScene() como que são incluídos
@@ -383,13 +385,13 @@ int main(int argc, char* argv[])
 
     // EBO para os índices da linha
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, lineEBO); // <<=== LIGAR O EBO
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(line_indices_initial), line_indices_initial, GL_STATIC_DRAW); // <<=== ENVIAR OS ÍNDICES
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(line_indices_initial), line_indices_initial, GL_STATIC_DRAW); 
 
     // Supondo que o layout location 0 seja a posição (vec3 a_position no vertex shader)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0); // 3 componentes (X,Y,Z)
     glEnableVertexAttribArray(0);
 
-    glBindVertexArray(0); // Desliga o VAO
+    glBindVertexArray(0); // Desliga o VAO*/
 
 
     // Imprimimos no terminal informações sobre a GPU do sistema
@@ -452,18 +454,14 @@ int main(int argc, char* argv[])
     g_Balls.push_back(cueBall);
 
 
-
-
-
-
-    // === INICIALIZAÇÃO DA BOLA DE DEPURACAO (Temporariamente ÚNICA) 
+    /*/ === INICIALIZAÇÃO DA BOLA DE DEPURACAO (Temporariamente ÚNICA) 
     g_DebugBall.radius = 0.005; // Usa a constante de raio que já existe
     g_DebugBall.position = glm::vec3(-0.03f, BALL_Y_AXIS, 0.5680f); // Posição inicial para começar o debug.
     g_DebugBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Velocidade inicial zero (não será usada na física manual)
     g_DebugBall.active = true;
     g_DebugBall.object_name = "the_sphere";
     g_DebugBall.shader_object_id = SPHERE;
-    g_DebugBall.texture_unit_index = 0;
+    g_DebugBall.texture_unit_index = 0;*/
 
     // === INICIALIZAÇÃO DAS BOLAS NUMERADAS (OBJECT BALLS) NO RACK ===
     int ball_id_counter = 1; // Começa de 1 (para Bola 1, Bola 2, ..., Bola 15)
@@ -771,7 +769,6 @@ int main(int argc, char* argv[])
             }
 
 
-
             // === TESTE DE COLISÃO COM AS TABELAS (SEGMENTOS DE RETA) ===
             for (const auto& segment : g_TableSegments)
             {
@@ -938,16 +935,16 @@ int main(int argc, char* argv[])
         DrawVirtualObject("10523_Pool_Table_v1_SG");
 
 
-        if (g_DebugBall.active)
-            {
-                glm::mat4 model_debug_ball = Matrix_Translate(g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z)
-                                        * Matrix_Scale(g_DebugBall.radius, g_DebugBall.radius, g_DebugBall.radius)
-                                        * Matrix_Rotate_X(-M_PI/2.0f);
-                glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model_debug_ball));
-                glUniform1i(g_object_id_uniform, g_DebugBall.shader_object_id);
-                glUniform1i(g_texture_index_uniform, g_DebugBall.texture_unit_index);
-                DrawVirtualObject(g_DebugBall.object_name.c_str());
-            }
+        /*if (g_DebugBall.active)
+        {
+            glm::mat4 model_debug_ball = Matrix_Translate(g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z)
+                                    * Matrix_Scale(g_DebugBall.radius, g_DebugBall.radius, g_DebugBall.radius)
+                                    * Matrix_Rotate_X(-M_PI/2.0f);
+            glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model_debug_ball));
+            glUniform1i(g_object_id_uniform, g_DebugBall.shader_object_id);
+            glUniform1i(g_texture_index_uniform, g_DebugBall.texture_unit_index);
+            DrawVirtualObject(g_DebugBall.object_name.c_str());
+        }*/
 
        
     
@@ -1766,7 +1763,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     }
 
 
-    // === CONTROLE MANUAL FIXO DA BOLA DE DEPURACAO (g_DebugBall) ===
+    /*/ === CONTROLE MANUAL FIXO DA BOLA DE DEPURACAO (g_DebugBall) ===
     // (Apenas quando a tecla é pressionada ou repetida)
     if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
@@ -1814,19 +1811,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
         }
 
-    }
-
-
-
-
-
-
-
-
-
-
-
-
+    }*/
 
     // Se o usuário apertar a tecla T, alterna o modo de mira
     if (key == GLFW_KEY_T && action == GLFW_PRESS)
