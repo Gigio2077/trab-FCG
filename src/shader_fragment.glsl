@@ -100,7 +100,7 @@ void main()
         U = 0.5 + theta / (2.0 * M_PI);
         V = 0.5 + phi / M_PI;
         
-        // === NOVO: Verificação para a Bola Branca (texture_unit_index = 0) ===
+        //  Verificação para a Bola Branca (texture_unit_index = 0) ===
         if (texture_index_uniform == 0) // Se for a bola branca (ID 0)
         {
             Kd0 = vec3(1.0f, 1.0f, 1.0f); // Cor branca sólida

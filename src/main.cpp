@@ -129,9 +129,9 @@ struct GameBall {
 std::vector<GameBall> g_Balls;
 
 // Tamanho do passo para o movimento fixo da bola (em unidades do mundo virtual)
-float g_BallStepSize = 0.001f; // <<=== Comece com 0.1. Ajuste este valor conforme sua escala.
+float g_BallStepSize = 0.002f; // <<=== Comece com 0.1. Ajuste este valor conforme sua escala.
 
-
+GameBall g_DebugBall;
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
 // A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
 // (map).  Veja dentro da função BuildTrianglesAndAddToVirtualScene() como que são incluídos
@@ -228,12 +228,12 @@ const float VELOCITY_STOP_THRESHOLD = 0.01f; // Limiar para zerar velocidade qua
 bool g_P_KeyHeld = false; // true se a tecla 'P' está sendo mantida pressionada
 double g_P_PressStartTime = 0.0; // Tempo em que a tecla 'P' foi pressionada pela primeira vez
 float g_CurrentShotPowerPercentage = 0.0f; // Força atual da tacada em porcentagem (0.0 a 100.0)
-float g_MaxShotChargeTime = 2.0f; // Tempo (em segundos) para carregar 100% da força
+float g_MaxShotChargeTime = 5.0f; // Tempo (em segundos) para carregar 100% da força
 float g_ShotPowerPingPongDirection = 1.0f; // Direção do "ping-pong": 1.0 para carregando (0->100), -1.0 para descarregando (100->0)
 
 // Constantes para o mapeamento da porcentagem para a força real aplicada
-const float g_MinShotPowerMagnitude = 1.0f; // Força mínima do impulso (mesmo para um toque rápido)
-const float g_MaxShotPowerMagnitude = 10.0f; // Força máxima do impulso
+const float g_MinShotPowerMagnitude = 0.50f; // Força mínima do impulso (mesmo para um toque rápido)
+const float g_MaxShotPowerMagnitude = 12.0f; // Força máxima do impulso
 
 
 
@@ -250,6 +250,7 @@ struct BoundingSegment {
 // Segmentos de reta que formam as tabelas internas da mesa (onde a bola colide).
 // As coordenadas são o centro da bola quando em contato com a tabela.
 std::vector<BoundingSegment> g_TableSegments;
+std::vector<BoundingSegment> g_PocketEntrySegments;
 
 
 #define SPHERE 0
@@ -318,7 +319,7 @@ int main(int argc, char* argv[])
     // Criamos uma janela do sistema operacional, com 800 colunas e 600 linhas
     // de pixels, e com título "INF01047 ...".
     GLFWwindow* window;
-    window = glfwCreateWindow(1920, 1080, "Sinuca Simulator- v0.7", NULL, NULL);
+    window = glfwCreateWindow(1920, 1080, "Sinuca Simulator- v0.8", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -427,9 +428,6 @@ int main(int argc, char* argv[])
     ComputeNormals(&tablemodel);
     BuildTrianglesAndAddToVirtualScene(&tablemodel);
 
-
-    
-
     if ( argc > 1 )
     {
         ObjModel model(argv[1]);
@@ -453,6 +451,19 @@ int main(int argc, char* argv[])
     cueBall.texture_unit_index = 0; // Unidade de textura para a bola branca
     g_Balls.push_back(cueBall);
 
+
+
+
+
+
+    // === INICIALIZAÇÃO DA BOLA DE DEPURACAO (Temporariamente ÚNICA) 
+    g_DebugBall.radius = 0.005; // Usa a constante de raio que já existe
+    g_DebugBall.position = glm::vec3(-0.03f, BALL_Y_AXIS, 0.5680f); // Posição inicial para começar o debug.
+    g_DebugBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Velocidade inicial zero (não será usada na física manual)
+    g_DebugBall.active = true;
+    g_DebugBall.object_name = "the_sphere";
+    g_DebugBall.shader_object_id = SPHERE;
+    g_DebugBall.texture_unit_index = 0;
 
     // === INICIALIZAÇÃO DAS BOLAS NUMERADAS (OBJECT BALLS) NO RACK ===
     int ball_id_counter = 1; // Começa de 1 (para Bola 1, Bola 2, ..., Bola 15)
@@ -503,6 +514,34 @@ int main(int argc, char* argv[])
     g_TableSegments.push_back({glm::vec3(TABLE_X_MAX_BALL_CENTER , BALL_Y_AXIS, 1.0520f), glm::vec3(TABLE_X_MAX_BALL_CENTER, BALL_Y_AXIS, 0.0770f)});
 
     // ===========================================
+    g_PocketEntrySegments.clear(); // Limpa se já houver algo para evitar duplicação em testes
+    
+
+    // Caçapa Superior Esquerda
+    g_PocketEntrySegments.push_back({glm::vec3(-0.5200f, BALL_Y_AXIS, 1.0530f), glm::vec3(-0.5500f, BALL_Y_AXIS, 1.0780f)});
+    g_PocketEntrySegments.push_back({glm::vec3(-0.4400f, BALL_Y_AXIS, 1.1480f), glm::vec3(-0.4650f, BALL_Y_AXIS, 1.1730f)});
+
+    // Caçapa Superior Direita
+    g_PocketEntrySegments.push_back({glm::vec3(0.5200f, BALL_Y_AXIS, 1.0520f), glm::vec3(0.5480f, BALL_Y_AXIS, 1.0800f)});
+    g_PocketEntrySegments.push_back({glm::vec3(0.4400f, BALL_Y_AXIS, 1.1480f), glm::vec3(0.4600f, BALL_Y_AXIS, 1.1700f)});
+
+    // Caçapa Central Esquerda
+    g_PocketEntrySegments.push_back({glm::vec3(-0.5540f, BALL_Y_AXIS, 0.0600f), glm::vec3(-0.5200f, BALL_Y_AXIS, 0.0720f)});
+    g_PocketEntrySegments.push_back({glm::vec3(-0.5200f, BALL_Y_AXIS, -0.0700f), glm::vec3(-0.5460f, BALL_Y_AXIS, -0.0620f)});
+
+    // Caçapa Central Direita
+    g_PocketEntrySegments.push_back({glm::vec3(0.5180f, BALL_Y_AXIS, 0.0740f), glm::vec3(0.5440f, BALL_Y_AXIS, 0.0620f)});
+    g_PocketEntrySegments.push_back({glm::vec3(0.5200f, BALL_Y_AXIS, -0.0720f), glm::vec3(0.5480f, BALL_Y_AXIS, -0.0600f)});
+
+    // Caçapa Inferior Esquerda
+    g_PocketEntrySegments.push_back({glm::vec3(-0.5200f, BALL_Y_AXIS, -1.0500f), glm::vec3(-0.5480f, BALL_Y_AXIS, -1.0780f)});
+    g_PocketEntrySegments.push_back({glm::vec3(-0.4400f, BALL_Y_AXIS, -1.1480f), glm::vec3(-0.4640f, BALL_Y_AXIS, -1.1740f)});
+
+    // Caçapa Inferior Direita
+    g_PocketEntrySegments.push_back({glm::vec3(0.4380f, BALL_Y_AXIS, -1.1480f), glm::vec3(0.4640f, BALL_Y_AXIS, -1.1740f)});
+    g_PocketEntrySegments.push_back({glm::vec3(0.5200f, BALL_Y_AXIS, -1.0540f), glm::vec3(0.5480f, BALL_Y_AXIS, -1.0800f)});
+    // ========================================================
+    
 
 
     // Inicializamos o código para renderização de texto.
@@ -552,6 +591,7 @@ int main(int argc, char* argv[])
         lastFrameTime = currentFrameTime;
         //fprintf(stdout, "DEBUG: DeltaTime: %.4f\n", deltaTime); // Para depuração, se necessário
         
+
         if (g_P_KeyHeld)
         {
             // Calcula o progresso com base no tempo decorrido desde o início do pressionamento
@@ -571,10 +611,6 @@ int main(int argc, char* argv[])
             }
             //fprintf(stdout, "DEBUG: Forca: %.2f%%\n", g_CurrentShotPowerPercentage); fflush(stdout);
         }
-
-
-        
-
 
         // === LÓGICA DE FÍSICA PARA TODAS AS BOLAS ===
         for (size_t i = 0; i < g_Balls.size(); ++i) 
@@ -698,6 +734,44 @@ int main(int argc, char* argv[])
                 }
             }
 
+
+            for (const auto& segment : g_PocketEntrySegments) 
+            {
+                glm::vec2 segment_vec = glm::vec2(segment.p2.x - segment.p1.x, segment.p2.z - segment.p1.z);
+                glm::vec2 ball_to_p1_vec = glm::vec2(ball_A.position.x - segment.p1.x, ball_A.position.z - segment.p1.z); 
+
+                float t = glm::dot(ball_to_p1_vec, segment_vec) / glm::dot(segment_vec, segment_vec);
+                t = glm::clamp(t, 0.0f, 1.0f);
+
+                glm::vec2 closest_point_on_segment = glm::vec2(segment.p1.x, segment.p1.z) + t * segment_vec;
+
+                glm::vec2 normal_vec_2d = glm::vec2(ball_A.position.x, ball_A.position.z) - closest_point_on_segment;
+
+                float distance = glm::length(normal_vec_2d);
+
+                if (distance < ball_A.radius) // Colisão se distância < raio
+                {
+                    glm::vec2 collision_normal_2d = glm::normalize(normal_vec_2d);
+                    float penetration_depth = ball_A.radius - distance;
+                    ball_A.position.x += collision_normal_2d.x * penetration_depth;
+                    ball_A.position.z += collision_normal_2d.y * penetration_depth; 
+
+                    glm::vec2 velocity_2d = glm::vec2(ball_A.velocity.x, ball_A.velocity.z);
+                    float dot_product = glm::dot(velocity_2d, collision_normal_2d);
+
+                    if (dot_product < 0) // Se movendo contra a parede
+                    {
+                        glm::vec2 reflected_velocity_2d = velocity_2d - (2.0f * dot_product * collision_normal_2d);
+                        reflected_velocity_2d *= RESTITUTION_COEFF;
+
+                        ball_A.velocity.x = reflected_velocity_2d.x;
+                        ball_A.velocity.z = reflected_velocity_2d.y; 
+                    }
+                }
+            }
+
+
+
             // === TESTE DE COLISÃO COM AS TABELAS (SEGMENTOS DE RETA) ===
             for (const auto& segment : g_TableSegments)
             {
@@ -730,7 +804,6 @@ int main(int argc, char* argv[])
                 }
             }
         }
-    
 
         glm::vec4 camera_position_c;  // Ponto "c", centro da câmera
         glm::vec4 camera_lookat_l;    // Ponto "l", para onde a câmera (look-at) estará sempre olhando
@@ -812,7 +885,6 @@ int main(int argc, char* argv[])
         // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
 
-
         // Note que, no sistema de coordenadas da câmera, os planos near e far
         // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
@@ -865,7 +937,17 @@ int main(int argc, char* argv[])
         glUniform1i(g_object_id_uniform, TABLE);
         DrawVirtualObject("10523_Pool_Table_v1_SG");
 
-        
+
+        if (g_DebugBall.active)
+            {
+                glm::mat4 model_debug_ball = Matrix_Translate(g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z)
+                                        * Matrix_Scale(g_DebugBall.radius, g_DebugBall.radius, g_DebugBall.radius)
+                                        * Matrix_Rotate_X(-M_PI/2.0f);
+                glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model_debug_ball));
+                glUniform1i(g_object_id_uniform, g_DebugBall.shader_object_id);
+                glUniform1i(g_texture_index_uniform, g_DebugBall.texture_unit_index);
+                DrawVirtualObject(g_DebugBall.object_name.c_str());
+            }
 
        
     
@@ -874,11 +956,6 @@ int main(int argc, char* argv[])
         {
 
             if (!ball.active) continue; // Só desenha se a bola estiver ativa
-
-
-            
-
-
 
             glm::mat4 ball_rotation_matrix = glm::toMat4(ball.orientation); // <<=== ADICIONE ESTA LINHA
 
@@ -905,10 +982,6 @@ int main(int argc, char* argv[])
             DrawVirtualObject(ball.object_name.c_str());
         }
     
-    
-
-    
-        
         // === DESENHAR LINHA GUIA DE MIRA (se o modo de mira estiver ativo) ===
         if (g_AimingMode)
         {
@@ -995,7 +1068,7 @@ int main(int argc, char* argv[])
 // Função que carrega uma imagem para ser utilizada como textura
 void LoadTextureImage(const char* filename)
 {
-    printf("Carregando imagem \"%s\"... ", filename);
+    //printf("Carregando imagem \"%s\"... ", filename);
 
     // Primeiro fazemos a leitura da imagem do disco
     stbi_set_flip_vertically_on_load(true);
@@ -1041,7 +1114,7 @@ void LoadTextureImage(const char* filename)
 
     stbi_image_free(data);
 
-    printf("Textura carregada na unidade GL_TEXTURE%d (textureunit = %u)\n", textureunit, textureunit);
+    //printf("Textura carregada na unidade GL_TEXTURE%d (textureunit = %u)\n", textureunit, textureunit);
 
 
     g_NumLoadedTextures += 1;
@@ -1692,6 +1765,69 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         glfwSetWindowShouldClose(window, GL_TRUE);
     }
 
+
+    // === CONTROLE MANUAL FIXO DA BOLA DE DEPURACAO (g_DebugBall) ===
+    // (Apenas quando a tecla é pressionada ou repetida)
+    if (action == GLFW_PRESS || action == GLFW_REPEAT)
+    {
+        // Reinicia a bola para uma posição conhecida (útil se ela sair do controle)
+        if (key == GLFW_KEY_R) // Exemplo: Tecla 'R' para Resetar a bola
+        {
+            g_DebugBall.position = glm::vec3(-0.0020f, BALL_Y_AXIS, 0.5680f); // Posição inicial
+            fprintf(stdout, "DEBUG: Bola resetada para a posicao inicial. Pos: (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
+        }
+
+        // Mover em X (esquerda/direita)
+        if (key == GLFW_KEY_LEFT) { // Seta para a esquerda
+            g_DebugBall.position.x -= g_BallStepSize;
+            fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
+        }
+        if (key == GLFW_KEY_RIGHT) { // Seta para a direita
+            g_DebugBall.position.x += g_BallStepSize;
+            fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
+        
+        }
+        if (key == GLFW_KEY_UP) { // Seta para cima
+            g_DebugBall.position.z -= g_BallStepSize;
+            fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
+        
+        }
+        if (key == GLFW_KEY_DOWN) { // Seta para baixo
+            g_DebugBall.position.z += g_BallStepSize;
+            fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
+        
+
+        if (key == GLFW_KEY_PAGE_UP) { // Seta para baixo
+            g_DebugBall.position.y += g_BallStepSize;
+            fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
+        }
+
+        if (key == GLFW_KEY_PAGE_DOWN) { // Seta para baixo
+            g_DebugBall.position.y += g_BallStepSize;
+            fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
+        }    
+
+                        
+
+
+
+
+        }
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
     // Se o usuário apertar a tecla T, alterna o modo de mira
     if (key == GLFW_KEY_T && action == GLFW_PRESS)
     {
@@ -1746,7 +1882,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             // Aplica a velocidade à bola branca
             if (!g_Balls.empty() && g_Balls[0].active) {
                 g_Balls[0].velocity = shoot_direction * shot_power_magnitude;
-
+                g_AimingMode = false;
                 fprintf(stdout, "DEBUG: Tacada! Forca %.2f%%. Vel: (%.2f, %.2f, %.2f)\n",
                         g_CurrentShotPowerPercentage,
                         g_Balls[0].velocity.x, g_Balls[0].velocity.y, g_Balls[0].velocity.z);
@@ -1966,7 +2102,6 @@ void TextRendering_ShowProjection(GLFWwindow* window)
         TextRendering_PrintString(window, "Orthographic", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
 }
 
-
 // Escrevemos na tela a porcentagem da força da tacada.
 void TextRendering_ShowShotPower(GLFWwindow* window)
 {
@@ -1997,10 +2132,6 @@ void TextRendering_ShowShotPower(GLFWwindow* window)
     // Você pode ajustar X e Y para centralizar ou posicionar melhor.
     TextRendering_PrintString(window, buffer, 0.5f, -0.8f, 1.2f); // Exemplo: Posição ajustada
 }
-
-
-
-
 
 // Escrevemos na tela o número de quadros renderizados por segundo (frames per
 // second).
