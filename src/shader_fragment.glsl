@@ -25,6 +25,8 @@ uniform int texture_index_uniform;
 #define SPHERE 0
 #define PLANE  1
 #define TABLE  2
+#define LINE 3
+
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -110,13 +112,19 @@ void main()
         }
     }
 
-
-
     else if (object_id == PLANE) // <<=== Este é o ID 1, para o CHÃO
     {
-        // === AQUI VOCÊ DEFINE A COR SÓLIDA PARA O CHÃO ===
-        Kd0 = vec3(0.5f, 0.5f, 0.5f); // Exemplo: Cinza sólido. Ajuste os valores RGB (Red, Green, Blue) entre 0.0f e 1.0f.
-        // Se você quisesse um marrom: Kd0 = vec3(0.6f, 0.4f, 0.2f);
+        // A COR SÓLIDA PARA O CHÃO ===
+        Kd0 = vec3(0.5f, 0.5f, 0.5f); 
+        
+    }
+
+
+    else if (object_id == LINE) 
+    {
+    
+        Kd0 = vec3(1.0f, 1.0f, 0.0f); 
+        
     }
 
 
@@ -124,6 +132,8 @@ void main()
     {
         Kd0 = texture(TextureImage[0], texcoords).rgb;
     }
+
+    
     else
     {
         Kd0 = texture(TextureImage[0], vec2(U,V)).rgb;

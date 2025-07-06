@@ -14,7 +14,7 @@ set(SOURCES
   src/ObjModel.cpp
 )
 
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.10)
 
 project(LAB_FCG VERSION 1.0.0)
 
@@ -63,6 +63,8 @@ if(WIN32)
 
   if(MINGW)
 
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE _USE_MATH_DEFINES)
+
     # Aqui tentamos descobrir qual libc do Widows está sendo usada
     # pelo compilador MinGW: msvcrt (antiga) ou ucrt (nova). Também
     # diferenciamos entre um compilador 32-bits (antigo) ou 64-bits.
@@ -100,6 +102,8 @@ if(WIN32)
   message(STATUS "LIBGLFW = ${LIBGLFW}")
 
   target_link_libraries(${EXECUTABLE_NAME} ${LIBGLFW} gdi32 opengl32)
+
+
 
 elseif(UNIX)
 
