@@ -33,6 +33,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/quaternion.hpp> 
+#include <glm/gtx/quaternion.hpp> 
 
 // Headers da biblioteca para carregar modelos obj
 #include <tiny_obj_loader.h>
@@ -119,6 +121,8 @@ struct GameBall {
         int   object_id;
         int texture_unit_index;
         int   shader_object_id;
+        glm::quat orientation;
+        glm::vec3 angular_velocity;
     };
 
 // Variável global para armazenar todas as bolas do jogo
@@ -440,6 +444,8 @@ int main(int argc, char* argv[])
     GameBall cueBall;
     cueBall.radius = BALL_VIRTUAL_RADIUS;
     cueBall.position = glm::vec3(-0.0020f, BALL_Y_AXIS, 0.5680f); // Posição inicial da bola branca
+    cueBall.angular_velocity = glm::vec3(0.0f, 0.0f, 0.0f);
+    cueBall.orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     cueBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f);
     cueBall.active = true;
     cueBall.object_name = "the_sphere";
@@ -460,6 +466,7 @@ int main(int argc, char* argv[])
             GameBall objectBall;
             objectBall.radius = BALL_VIRTUAL_RADIUS;
             objectBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Começa parada
+            objectBall.angular_velocity = glm::vec3(0.0f, 0.0f, 0.0f);
             objectBall.active = true;
             objectBall.object_name = "the_sphere";
             objectBall.shader_object_id = SPHERE; // Todas as bolas são modelos SPHERE
@@ -472,6 +479,7 @@ int main(int argc, char* argv[])
             objectBall.position = glm::vec3(current_x, BALL_Y_AXIS, current_z);
 
             // Atribui o ID da textura: Bola 1 usa TextureImage[1], Bola 2 usa TextureImage[2], etc.
+            objectBall.orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
             objectBall.texture_unit_index = ball_id_counter; // <<=== TEXTURA CORRETA
             g_Balls.push_back(objectBall);
 
@@ -584,6 +592,40 @@ int main(int argc, char* argv[])
                 ball_A.velocity.x = 0.0f;
                 ball_A.velocity.z = 0.0f;
             }
+
+
+
+             // === CALCULAR VELOCIDADE ANGULAR E ATUALIZAR ORIENTAÇÃO (ROLLING) ===
+            // A velocidade angular (omega) é perpendicular ao vetor de velocidade linear (no plano XZ)
+            // e à normal da superfície (eixo Y para cima).
+            // Fórmula para rolamento puro: omega = (normal_da_superficie X velocidade_linear) / raio
+
+            glm::vec3 linear_velocity_xz = glm::vec3(ball_A.velocity.x, 0.0f, ball_A.velocity.z); // Apenas componentes XZ da velocidade
+            float linear_speed_xz = glm::length(linear_velocity_xz); // Magnitude da velocidade no plano XZ
+
+            if (linear_speed_xz > VELOCITY_STOP_THRESHOLD) // Só calcula rolamento se a bola estiver se movendo
+            {
+                glm::vec3 surface_normal = glm::vec3(0.0f, 1.0f, 0.0f); // Vetor "para cima" da mesa
+                // Velocidade angular = (Normal x Velocidade Linear) / Raio
+                ball_A.angular_velocity = glm::cross(surface_normal, linear_velocity_xz) / ball_A.radius;
+
+                // Atualiza a orientação da bola usando a velocidade angular e deltaTime
+                // Rotacao = angleAxis(angulo, eixo_de_rotacao)
+                // Angulo de rotação = magnitude(velocidade_angular) * deltaTime
+                // Eixo de rotação = normalizar(velocidade_angular)
+
+                // Cria um quatérnio de rotação para este frame
+                glm::quat frame_rotation = glm::angleAxis(glm::length(ball_A.angular_velocity) * deltaTime, glm::normalize(ball_A.angular_velocity));
+
+                // Aplica a rotação ao quatérnio de orientação atual da bola
+                ball_A.orientation = glm::normalize(frame_rotation * ball_A.orientation); // Multiplica a nova rotação pela antiga
+            }
+            else // Bola parada, zera velocidade angular e para de girar
+            {
+                ball_A.angular_velocity = glm::vec3(0.0f, 0.0f, 0.0f);
+            }
+
+
 
             // Colisão com o Feltro da Mesa (Chão) para ball_A
             if (ball_A.position.y - ball_A.radius < FELT_SURFACE_Y_ACTUAL)
@@ -830,14 +872,36 @@ int main(int argc, char* argv[])
         // === DESENHAMOS TODAS AS BOLAS ===
         for (const auto& ball : g_Balls) // <<=== LOOP SOBRE TODAS AS BOLAS
         {
+
             if (!ball.active) continue; // Só desenha se a bola estiver ativa
 
+
+            
+
+
+
+            glm::mat4 ball_rotation_matrix = glm::toMat4(ball.orientation); // <<=== ADICIONE ESTA LINHA
+
             glm::mat4 model_ball = Matrix_Translate(ball.position.x, ball.position.y, ball.position.z)
+                                * ball_rotation_matrix // <<=== ADICIONE ESTA LINHA (multiplica a rotação da bola)
                                 * Matrix_Scale(ball.radius, ball.radius, ball.radius)
-                                * Matrix_Rotate_X(-M_PI/2.0f);
+                                * Matrix_Rotate_X(-M_PI/2.0f); // Mantenha a rotação original do modelo OBJ se necessária
+                                                                // A ordem importa: rotação do modelo OBJ primeiro, depois a rotação de rolamento.
+                                                                // OU: rotação de rolamento, depois a rotação do OBJ. Depende do seu modelo.
+                                                                // Experimente:
+                                                                // * ball_rotation_matrix * Matrix_Scale(...) * Matrix_Rotate_X(-M_PI/2.0f);
+                                                                // OU:
+                                                                // * Matrix_Scale(...) * ball_rotation_matrix * Matrix_Rotate_X(-M_PI/2.0f);
+                                                                // Se a rotação do modelo OBJ é para "levantá-lo", ela deve ser a última antes do Scale.
+                                                                // Mantenha como está por enquanto, mas se a rotação parecer errada, inverta a ordem com ball_rotation_matrix.
+                                                                // É mais comum: Translação * Rotação_do_Modelo * Rotação_do_Jogo * Escala.
+                                                                // No seu caso: Translação * Rotação_do_Modelo_Original * Rotação_de_Rolamento * Escala
+                                                                // Então, melhor seria:
+                                                                // * Matrix_Rotate_X(-M_PI/2.0f) * ball_rotation_matrix * Matrix_Scale(...)
+                                                                // Mas vamos manter a ordem mais simples e testar.
             glUniformMatrix4fv(g_model_uniform, 1 , GL_FALSE , glm::value_ptr(model_ball));
-            glUniform1i(g_object_id_uniform, ball.shader_object_id); // Usa o ID do shader da bola (SPHERE)
-            glUniform1i(g_texture_index_uniform, ball.texture_unit_index); // <<=== ENVIA O ÍNDICE DA TEXTURA
+            glUniform1i(g_object_id_uniform, ball.shader_object_id);
+            glUniform1i(g_texture_index_uniform, ball.texture_unit_index);
             DrawVirtualObject(ball.object_name.c_str());
         }
     

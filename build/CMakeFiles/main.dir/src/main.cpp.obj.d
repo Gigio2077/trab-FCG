@@ -515,6 +515,24 @@ CMakeFiles/main.dir/src/main.cpp.obj: \
  C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/ext/vector_uint1_precision.hpp \
  C:/msys64/mingw64/include/c++/13.2.0/cstring \
  C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/gtc/type_ptr.inl \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/gtx/quaternion.hpp \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/glm.hpp \
+ C:/msys64/mingw64/include/c++/13.2.0/climits \
+ C:/msys64/mingw64/include/c++/13.2.0/cfloat \
+ C:/msys64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/float.h \
+ C:/msys64/mingw64/include/float.h \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/fwd.hpp \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/packing.hpp \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/detail/func_packing.inl \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/detail/type_half.hpp \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/detail/type_half.inl \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/integer.hpp \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/detail/func_integer.inl \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/ext/quaternion_exponential.hpp \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/ext/quaternion_exponential.inl \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/gtx/norm.hpp \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/gtx/norm.inl \
+ C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/glm/gtx/quaternion.inl \
  C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/tiny_obj_loader.h \
  C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/stb_image.h \
  C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/utils.h \
