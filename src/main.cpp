@@ -129,7 +129,7 @@ struct GameBall {
 std::vector<GameBall> g_Balls;
 
 // Tamanho do passo para o movimento fixo da bola (em unidades do mundo virtual)
-float g_BallStepSize = 0.002f; // <<=== Comece com 0.1. Ajuste este valor conforme sua escala.
+float g_BallStepSize = 0.02f; // <<=== Comece com 0.1. Ajuste este valor conforme sua escala.
 
 GameBall g_DebugBall;
 
@@ -194,9 +194,14 @@ bool g_ShowInfoText = true;
 // Variável que controla se o modo de câmera livre está ativo
 bool g_FreeLookMode = false;
 
+bool g_CueBallPositioningMode = false;
+
 // Altura fixa em Y para o CENTRO das bolas quando elas estão apoiadas na mesa.
 const float BALL_Y_AXIS = -0.2667f; // Valor fornecido pelo usuário.
 const float BALL_VIRTUAL_RADIUS = 0.02625f; 
+
+// Raio das esferas que representam as caçapas (para visualização e colisão)
+const float POCKET_SPHERE_RADIUS = 0.1f; 
 
 
 // Constantes para o posicionamento das bolas no rack triangular
@@ -249,10 +254,21 @@ struct BoundingSegment {
     glm::vec3 p2; // Ponto final do segmento
 };
 
+
+// Estrutura para representar uma caçapa no jogo
+struct Pocket {
+    glm::vec3 position; // Posição do centro da caçapa no mundo virtual
+    float radius;       // Raio da caçapa (para detecção de colisão)
+    // Você pode adicionar um ID ou nome aqui se quiser renderizá-las depois.
+};
+
 // Segmentos de reta que formam as tabelas internas da mesa (onde a bola colide).
 // As coordenadas são o centro da bola quando em contato com a tabela.
 std::vector<BoundingSegment> g_TableSegments;
+
 std::vector<BoundingSegment> g_PocketEntrySegments;
+
+std::vector<Pocket> g_Pockets; // Variável global para armazenar todas as caçapas da mesa
 
 
 #define SPHERE 0
@@ -404,7 +420,6 @@ int main(int argc, char* argv[])
 
     // Carregamos os shaders de vértices e de fragmentos que serão utilizados
     // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
-    //
     LoadShadersFromFiles();
 
     // Carregamos duas imagens para serem utilizadas como textura
@@ -440,7 +455,7 @@ int main(int argc, char* argv[])
     // 1. Inicializa o vetor global de bolas
     g_Balls.clear(); // Limpa o vetor se ele já contiver algo
 
-    // 2. Bola Branca (Cue Ball) - DECLARAÇÃO INDIVIDUAL
+    // 2. Bola Branca (Cue Ball) 
     GameBall cueBall;
     cueBall.radius = BALL_VIRTUAL_RADIUS;
     cueBall.position = glm::vec3(-0.0020f, BALL_Y_AXIS, 0.5680f); // Posição inicial da bola branca
@@ -453,15 +468,14 @@ int main(int argc, char* argv[])
     cueBall.texture_unit_index = 0; // Unidade de textura para a bola branca
     g_Balls.push_back(cueBall);
 
-
-    /*/ === INICIALIZAÇÃO DA BOLA DE DEPURACAO (Temporariamente ÚNICA) 
-    g_DebugBall.radius = 0.005; // Usa a constante de raio que já existe
+    // === INICIALIZAÇÃO DA BOLA DE DEPURACAO (Temporariamente ÚNICA) 
+    g_DebugBall.radius = 0.1; // Usa a constante de raio que já existe
     g_DebugBall.position = glm::vec3(-0.03f, BALL_Y_AXIS, 0.5680f); // Posição inicial para começar o debug.
     g_DebugBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Velocidade inicial zero (não será usada na física manual)
-    g_DebugBall.active = true;
+    g_DebugBall.active = false;
     g_DebugBall.object_name = "the_sphere";
     g_DebugBall.shader_object_id = SPHERE;
-    g_DebugBall.texture_unit_index = 0;*/
+    g_DebugBall.texture_unit_index = 0;
 
     // === INICIALIZAÇÃO DAS BOLAS NUMERADAS (OBJECT BALLS) NO RACK ===
     int ball_id_counter = 1; // Começa de 1 (para Bola 1, Bola 2, ..., Bola 15)
@@ -510,9 +524,6 @@ int main(int argc, char* argv[])
     g_TableSegments.push_back({glm::vec3(-0.4400f, BALL_Y_AXIS, TABLE_Z_MAX_BALL_CENTER), glm::vec3(0.4340f, BALL_Y_AXIS, TABLE_Z_MAX_BALL_CENTER)});
     // Segmento 6
     g_TableSegments.push_back({glm::vec3(TABLE_X_MAX_BALL_CENTER , BALL_Y_AXIS, 1.0520f), glm::vec3(TABLE_X_MAX_BALL_CENTER, BALL_Y_AXIS, 0.0770f)});
-
-    // ===========================================
-    g_PocketEntrySegments.clear(); // Limpa se já houver algo para evitar duplicação em testes
     
 
     // Caçapa Superior Esquerda
@@ -541,6 +552,14 @@ int main(int argc, char* argv[])
     // ========================================================
     
 
+    // As 6 caçapas com raio 0.1 e BALL_Y_AXIS como coordenada Y
+    g_Pockets.push_back({glm::vec3(0.5500f, BALL_Y_AXIS, 1.1900f), POCKET_SPHERE_RADIUS});
+    g_Pockets.push_back({glm::vec3(-0.5500f, BALL_Y_AXIS, 1.1900f), POCKET_SPHERE_RADIUS});
+    g_Pockets.push_back({glm::vec3(-0.6300f, BALL_Y_AXIS, 0.0000f), POCKET_SPHERE_RADIUS});
+    g_Pockets.push_back({glm::vec3(0.6300f, BALL_Y_AXIS, 0.0000f), POCKET_SPHERE_RADIUS});
+    g_Pockets.push_back({glm::vec3(-0.5740f, BALL_Y_AXIS, -1.1860f), POCKET_SPHERE_RADIUS});
+    g_Pockets.push_back({glm::vec3(0.5700f, BALL_Y_AXIS, -1.1860f), POCKET_SPHERE_RADIUS});
+    // ================================
 
     // Inicializamos o código para renderização de texto.
     TextRendering_Init();
@@ -555,10 +574,7 @@ int main(int argc, char* argv[])
 
     GLint maxTextures;
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTextures);
-    printf("\n\n\nLimite máximo de texturas: %d \n ", maxTextures);
-
-
-
+    //printf("\n\n\nLimite máximo de texturas: %d \n ", maxTextures);
 
     // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
@@ -622,21 +638,15 @@ int main(int argc, char* argv[])
             ball_A.position += ball_A.velocity * deltaTime;
             ball_A.velocity.x *= BALL_FRICTION_FACTOR;
             ball_A.velocity.z *= BALL_FRICTION_FACTOR;
-            if (glm::length(glm::vec2(ball_A.velocity.x, ball_A.velocity.z)) < VELOCITY_STOP_THRESHOLD) {
+
+            if (glm::length(glm::vec2(ball_A.velocity.x, ball_A.velocity.z)) < VELOCITY_STOP_THRESHOLD)
+            {
                 ball_A.velocity.x = 0.0f;
                 ball_A.velocity.z = 0.0f;
             }
-
-
-
-             // === CALCULAR VELOCIDADE ANGULAR E ATUALIZAR ORIENTAÇÃO (ROLLING) ===
-            // A velocidade angular (omega) é perpendicular ao vetor de velocidade linear (no plano XZ)
-            // e à normal da superfície (eixo Y para cima).
-            // Fórmula para rolamento puro: omega = (normal_da_superficie X velocidade_linear) / raio
-
+            // === CALCULAR VELOCIDADE ANGULAR E ATUALIZAR ORIENTAÇÃO (ROLLING)
             glm::vec3 linear_velocity_xz = glm::vec3(ball_A.velocity.x, 0.0f, ball_A.velocity.z); // Apenas componentes XZ da velocidade
             float linear_speed_xz = glm::length(linear_velocity_xz); // Magnitude da velocidade no plano XZ
-
             if (linear_speed_xz > VELOCITY_STOP_THRESHOLD) // Só calcula rolamento se a bola estiver se movendo
             {
                 glm::vec3 surface_normal = glm::vec3(0.0f, 1.0f, 0.0f); // Vetor "para cima" da mesa
@@ -659,8 +669,6 @@ int main(int argc, char* argv[])
                 ball_A.angular_velocity = glm::vec3(0.0f, 0.0f, 0.0f);
             }
 
-
-
             // Colisão com o Feltro da Mesa (Chão) para ball_A
             if (ball_A.position.y - ball_A.radius < FELT_SURFACE_Y_ACTUAL)
             {
@@ -672,7 +680,7 @@ int main(int argc, char* argv[])
                 }
             }
 
-            // === 2. TESTE DE COLISÃO BOLA-BOLA (Entre ball_A e todas as outras ball_B) ===
+            // TESTE DE COLISÃO BOLA-BOLA (Entre ball_A e todas as outras ball_B) ===
             // Este loop aninhado garante que cada par de bolas seja verificado apenas uma vez (evita A vs B e B vs A, e A vs A).
             for (size_t j = i + 1; j < g_Balls.size(); ++j)
             {
@@ -723,16 +731,10 @@ int main(int argc, char* argv[])
                     // Aplica o impulso às velocidades de ambas as bolas
                     ball_A.velocity += impulse;
                     ball_B.velocity -= impulse; 
-
-                    /*fprintf(stdout, "DEBUG: COLISAO BOLA-BOLA! ID %d vs ID %d. PosA: (%.2f,%.2f,%.2f) PosB: (%.2f,%.2f,%.2f)\n",
-                            ball_A.texture_unit_index, ball_B.texture_unit_index,
-                            ball_A.position.x, ball_A.position.y, ball_A.position.z,
-                            ball_B.position.x, ball_B.position.y, ball_B.position.z);
-                    fflush(stdout);*/
                 }
             }
 
-
+            // TESTE COLISAO BOLA E ENTRADA DA CACAPA
             for (const auto& segment : g_PocketEntrySegments) 
             {
                 glm::vec2 segment_vec = glm::vec2(segment.p2.x - segment.p1.x, segment.p2.z - segment.p1.z);
@@ -768,8 +770,7 @@ int main(int argc, char* argv[])
                 }
             }
 
-
-            // === TESTE DE COLISÃO COM AS TABELAS (SEGMENTOS DE RETA) ===
+            //TESTE DE COLISÃO COM AS TABELAS 
             for (const auto& segment : g_TableSegments)
             {
                 
@@ -800,6 +801,38 @@ int main(int argc, char* argv[])
                     }
                 }
             }
+            
+            // === TESTE DE COLISÃO BOLA-CAÇAPA (esferas) ===
+            for (const auto& pocket : g_Pockets)
+            {
+                float distance = glm::length(ball_A.position - pocket.position);
+                if (distance <= (ball_A.radius + pocket.radius))
+                {
+                    // Se a bola que caiu é a bola branca (texture_unit_index == 0)
+                    if (ball_A.texture_unit_index == 0) // <<=== VERIFICA SE É A BOLA BRANCA
+                    {
+                        g_CueBallPositioningMode = true; // Entra no modo de posicionamento
+                        // Coloca a bola branca em uma posição inicial para reposicionamento
+                        // Exemplo: no centro da linha de base (head string)
+                        ball_A.position = glm::vec3(-0.0020f, BALL_Y_AXIS, 0.5680f); // Posição de reposicionamento
+                        ball_A.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Zera a velocidade
+                        // A bola branca permanece ativa, mas seu movimento será manual
+                        fprintf(stdout, "DEBUG: Bola branca encacapada! Entrando no modo de posicionamento.\n");
+                    }
+                    else // Se for qualquer outra bola (não a branca)
+                    {
+                        ball_A.active = false; // Desativa a bola
+                        ball_A.position = glm::vec3(1000.0f, 1000.0f, 1000.0f); // Move para longe da cena
+                        ball_A.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Zera a velocidade
+                        fprintf(stdout, "DEBUG: Bola encacapada! Pos: (%.4f, %.4f, %.4f)\n", ball_A.position.x, ball_A.position.y, ball_A.position.z);
+                    }
+                    fflush(stdout);
+                    break; // A bola já caiu, não precisa testar outras caçapas para esta bola.
+                }
+            }
+        
+        
+        
         }
 
         glm::vec4 camera_position_c;  // Ponto "c", centro da câmera
@@ -935,7 +968,7 @@ int main(int argc, char* argv[])
         DrawVirtualObject("10523_Pool_Table_v1_SG");
 
 
-        /*if (g_DebugBall.active)
+        if (g_DebugBall.active)
         {
             glm::mat4 model_debug_ball = Matrix_Translate(g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z)
                                     * Matrix_Scale(g_DebugBall.radius, g_DebugBall.radius, g_DebugBall.radius)
@@ -944,7 +977,7 @@ int main(int argc, char* argv[])
             glUniform1i(g_object_id_uniform, g_DebugBall.shader_object_id);
             glUniform1i(g_texture_index_uniform, g_DebugBall.texture_unit_index);
             DrawVirtualObject(g_DebugBall.object_name.c_str());
-        }*/
+        }
 
        
     
@@ -1760,10 +1793,40 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     {
         glfwSetWindowShouldClose(window, GL_TRUE);
+    }   
+
+    // === CONTROLE DA BOLA BRANCA NO MODO DE POSICIONAMENTO ===
+    if (g_CueBallPositioningMode)
+    {
+        float step = g_BallStepSize; // Um passo maior para posicionamento manual
+
+        if (key == GLFW_KEY_LEFT) {
+            g_Balls[0].position.x -= step;
+        }
+        if (key == GLFW_KEY_RIGHT) {
+            g_Balls[0].position.x += step;
+        }
+        // Para mover para frente/trás na mesa (eixo Z)
+        if (key == GLFW_KEY_UP) {
+            g_Balls[0].position.z -= step; // Z negativo é "para frente" na mesa
+        }
+        if (key == GLFW_KEY_DOWN) {
+            g_Balls[0].position.z += step; // Z positivo é "para trás" na mesa
+        }
+        // A altura Y da bola deve permanecer fixa
+        g_Balls[0].position.y = BALL_Y_AXIS;
+
+        // Sair do modo de posicionamento e permitir o chute
+        if (key == GLFW_KEY_ENTER || key == GLFW_KEY_SPACE) // Tecla Enter ou Espaço para confirmar
+        {
+            g_CueBallPositioningMode = false;
+            fprintf(stdout, "DEBUG: Bola branca posicionada. Modo de jogo reativado.\n");
+        }
+        fprintf(stdout, "DEBUG: Posicao da Bola Branca: (%.4f, %.4f, %.4f)\n", g_Balls[0].position.x, g_Balls[0].position.y, g_Balls[0].position.z);
     }
 
 
-    /*/ === CONTROLE MANUAL FIXO DA BOLA DE DEPURACAO (g_DebugBall) ===
+    /*/ === CONTROLE MANUAL FIXO DA BOLA DE DEPURACAO (g_DebugBall) 
     // (Apenas quando a tecla é pressionada ou repetida)
     if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
@@ -1789,10 +1852,12 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
         
         }
+
         if (key == GLFW_KEY_DOWN) { // Seta para baixo
             g_DebugBall.position.z += g_BallStepSize;
             fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
         
+        }
 
         if (key == GLFW_KEY_PAGE_UP) { // Seta para baixo
             g_DebugBall.position.y += g_BallStepSize;
@@ -1803,12 +1868,17 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             g_DebugBall.position.y += g_BallStepSize;
             fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
         }    
-
-                        
-
-
-
-
+        if (key == GLFW_KEY_2)
+        {
+            g_DebugBall.radius += 0.1;
+            fprintf(stdout, "DEBUG: RAIO ATUAL (%.4f,)\n", g_DebugBall.radius);
+        
+        }
+         
+        if (key == GLFW_KEY_1)
+        {
+            g_DebugBall.radius -= 0.1;
+            fprintf(stdout, "DEBUG: RAIO ATUAL (%.4f,)\n", g_DebugBall.radius);
         }
 
     }*/
@@ -1847,8 +1917,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         }
         fflush(stdout);
     }
-
-
     
     if (key == GLFW_KEY_P && action == GLFW_RELEASE)
     {
@@ -1971,7 +2039,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     // Lógica para as flags de WASD (independentemente do modo de câmera livre)
     if (key == GLFW_KEY_W) {
         g_W_Pressed = (action == GLFW_PRESS || action == GLFW_REPEAT);
-        //fprintf(stdout, "DEBUG: W key state: %d (Press/Repeat: %d)\n", g_W_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
+        fprintf(stdout, "DEBUG: W key state: %d (Press/Repeat: %d)\n", g_W_Pressed, (action == GLFW_PRESS || action == GLFW_REPEAT)); // <<=== NOVO DEBUG
     }
     if (key == GLFW_KEY_A) {
         g_A_Pressed = (action == GLFW_PRESS || action == GLFW_REPEAT);
