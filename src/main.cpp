@@ -83,6 +83,7 @@ void TextRendering_ShowEulerAngles(GLFWwindow* window);
 void TextRendering_ShowProjection(GLFWwindow* window);
 void TextRendering_ShowFramesPerSecond(GLFWwindow* window);
 void TextRendering_ShowShotPower(GLFWwindow* window);
+void TextRendering_ShowMenu(GLFWwindow* window);
 
 // Funções callback para comunicação com o sistema operacional e interação do
 // usuário. Veja mais comentários nas definições das mesmas, abaixo.
@@ -123,6 +124,7 @@ struct GameBall {
         int   shader_object_id;
         glm::quat orientation;
         glm::vec3 angular_velocity;
+        bool is_pocketed;
     };
 
 // Variável global para armazenar todas as bolas do jogo
@@ -191,8 +193,20 @@ bool g_UsePerspectiveProjection = true;
 // Variável que controla se o texto informativo será mostrado na tela.
 bool g_ShowInfoText = true;
 
-// Variável que controla se o modo de câmera livre está ativo
-bool g_FreeLookMode = false;
+
+
+// // Variável que controla se o modo de câmera livre está ativo
+// bool g_FreeLookMode = false;
+// Agora há 3 estados de câmera, freeLook, look_at e menu, e 
+// Camera mode enum
+enum CameraMode {
+    LOOKAT_WHITE_BALL, // Look at white ball (fixed mode)
+    FREE_CAMERA,       // Free camera with WASD and mouse
+    BEZIER             // Bézier curve for game menu
+};
+// Estou instanciando fora da main para que não precise passar como parametro para as respectivas funcoes
+CameraMode g_CameraMode = BEZIER; // Default to look-at white ball
+
 
 // Altura fixa em Y para o CENTRO das bolas quando elas estão apoiadas na mesa.
 const float BALL_Y_AXIS = -0.2667f; // Valor fornecido pelo usuário.
@@ -235,7 +249,7 @@ float g_ShotPowerPingPongDirection = 1.0f; // Direção do "ping-pong": 1.0 para
 
 // Constantes para o mapeamento da porcentagem para a força real aplicada
 const float g_MinShotPowerMagnitude = 0.50f; // Força mínima do impulso (mesmo para um toque rápido)
-const float g_MaxShotPowerMagnitude = 12.0f; // Força máxima do impulso
+const float g_MaxShotPowerMagnitude = 5.0f; // Força máxima do impulso
 
 
 
@@ -291,6 +305,25 @@ GLuint lineEBO;
 
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
+
+// Calculate a point on a cubic Bézier curve for 2D (X, Z)
+glm::vec2 CalculateBezierPoint(float t, const glm::vec2& p0, const glm::vec2& p1, 
+                              const glm::vec2& p2, const glm::vec2& p3)
+{
+    float u = 1.0f - t;
+    float tt = t * t;
+    float uu = u * u;
+    float uuu = uu * u;
+    float ttt = tt * t;
+
+    glm::vec2 point = uuu * p0;
+    point += 3.0f * uu * t * p1;
+    point += 3.0f * u * tt * p2;
+    point += ttt * p3;
+
+    return point;
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -355,6 +388,11 @@ int main(int argc, char* argv[])
     glfwGetFramebufferSize(window, &initial_framebuffer_width, &initial_framebuffer_height);
     // Agora, chamamos o callback com as dimensões REAIS obtidas.
     FramebufferSizeCallback(window, initial_framebuffer_width, initial_framebuffer_height);
+
+
+    
+    // Assume you have a VAO/VBO setup for rendering
+    GLuint circle_vao, circle_vbo;
 
     
     // Inicialmente, definimos um quadrado 1x1 no plano XZ, centrado em (0,0)
@@ -807,7 +845,7 @@ int main(int argc, char* argv[])
         glm::vec4 camera_view_vector; // Vetor "view", sentido para onde a câmera está virada
         glm::vec4 camera_up_vector   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eixo Y global)
 
-        if (g_FreeLookMode) // Se o modo de câmera livre estiver ativado
+        if (g_CameraMode == FREE_CAMERA) // Se o modo de câmera livre estiver ativado
         {
             camera_position_c = g_FreeCameraPosition; // Usa a posição atualizada pelo WASD
 
@@ -849,7 +887,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        else // Modo de câmera normal (look-at na origem)
+        else if (g_CameraMode == LOOKAT_WHITE_BALL) // Modo de câmera normal (look-at na origem)
         {
             // O ponto para onde a câmera (look-at) estará sempre olhando: o centro da bola branca.
             // Acessamos a primeira bola do vetor g_Balls (assumindo que g_Balls[0] é a bola branca).
@@ -874,6 +912,44 @@ int main(int argc, char* argv[])
             // O vetor "view" agora é (look_at - position), como sempre, mas com os novos pontos.
             camera_view_vector = camera_lookat_l - camera_position_c;
         }
+        else if (g_CameraMode == BEZIER) {
+            // Bézier curve for horizontal panning (X, Z) around table center
+            static float t = 0.0f; // Progress along Bézier curve (0 to 1)
+            t += 0.1f * deltaTime; // Complete curve in ~10 seconds
+            if (t > 1.0f) t -= 1.0f; // Loop the path
+
+            // Define Bézier control points (X, Z) for a near-circular path
+            glm::vec2 p0(0.0f, 2.0f);    // Start at (0, 2)
+            glm::vec2 p1(2.0f, 0.0f);    // Curve toward (2, 0)
+            glm::vec2 p2(0.0f, -2.0f);   // Curve toward (0, -2)
+            glm::vec2 p3(-2.0f, 0.0f);   // Curve toward (-2, 0)
+
+            // Calculate X, Z using Bézier curve
+            glm::vec2 xz = CalculateBezierPoint(t, p0, p1, p2, p3);
+
+            // Use fixed phi to prevent Y flickering
+            float fixedPhi = 0.785f; // Default value from your setup
+            float y = g_CameraDistance * sin(fixedPhi); // Fixed Y coordinate (~1.414)
+
+            // Set camera position
+            camera_position_c = glm::vec4(xz.x, y, xz.y, 1.0f);
+
+            // Set look-at point to table center
+            camera_lookat_l = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+            // Calculate view vector
+            camera_view_vector = camera_lookat_l - camera_position_c;
+
+            // Update theta for consistency (phi remains fixed)
+            glm::vec3 direction = glm::normalize(glm::vec3(camera_lookat_l - camera_position_c));
+            g_CameraTheta = atan2(direction.x, direction.z);
+            g_CameraPhi = fixedPhi; // Keep phi fixed to avoid flipping
+
+            // Print camera position for debugging
+            // printf("Bézier Pan - Camera Position: (%.2f, %.2f, %.2f)\n",
+            //     camera_position_c.x, camera_position_c.y, camera_position_c.z);
+            }
+///////
 
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
@@ -946,7 +1022,6 @@ int main(int argc, char* argv[])
             DrawVirtualObject(g_DebugBall.object_name.c_str());
         }*/
 
-       
     
         // === DESENHAMOS TODAS AS BOLAS ===
         for (const auto& ball : g_Balls) // <<=== LOOP SOBRE TODAS AS BOLAS
@@ -979,6 +1054,11 @@ int main(int argc, char* argv[])
             DrawVirtualObject(ball.object_name.c_str());
         }
     
+        if (true){
+
+        }
+
+
         // === DESENHAR LINHA GUIA DE MIRA (se o modo de mira estiver ativo) ===
         if (g_AimingMode)
         {
@@ -1035,6 +1115,9 @@ int main(int argc, char* argv[])
 
         // === CHAMADA PARA EXIBIR PORCENTAGEM DE FORÇA NA TELA ===
         TextRendering_ShowShotPower(window);
+
+        //CHAMADA DA FUNÇÃO MENU
+        TextRendering_ShowMenu(window);
 
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
@@ -1664,8 +1747,14 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
     float dx = xpos - g_LastCursorPosX;
     float dy = ypos - g_LastCursorPosY;
 
+    float x = g_CameraDistance * cos(g_CameraPhi) * sin(g_CameraTheta);
+    float y = g_CameraDistance * sin(g_CameraPhi);
+    float z = g_CameraDistance * cos(g_CameraPhi) * cos(g_CameraTheta);
+
+    // Print current camera position
+    printf("Camera Position: (%.2f, %.2f, %.2f)\n", x, y, z);      
     // Lógica para o modo de Câmera Livre (mouse sem botão)
-    if (g_FreeLookMode)
+    if (g_CameraMode == FREE_CAMERA)
     {
         g_CameraTheta -= 0.01f*dx;
         g_CameraPhi   -= 0.01f*dy;
@@ -1678,6 +1767,8 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 
         if (g_CameraPhi < phimin)
             g_CameraPhi = phimin;
+
+        
     }
 
 
@@ -1724,8 +1815,9 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 // Função callback chamada sempre que o usuário movimenta a "rodinha" do mouse.
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    // Se o modo de câmera livre estiver DESATIVADO, o scroll controla a distância da câmera normal.
-    if (!g_FreeLookMode) // <<=== ADICIONE ESTA CONDIÇÃO
+    // OLD::Se o modo de câmera livre estiver DESATIVADO, o scroll controla a distância da câmera normal.
+    // Se o modo Camera Bola branca
+    if (g_CameraMode == LOOKAT_WHITE_BALL) // <<=== ADICIONE ESTA CONDIÇÃO
     {
         // Usamos a variável yoffset para simular um zoom da câmera.
         g_CameraDistance -= yoffset;
@@ -1909,10 +2001,21 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     // Se o usuário apertar a tecla C, alterna o modo de câmera.
     if (key == GLFW_KEY_C && action == GLFW_PRESS)
     {
+        //inicialmente, se estava no menu e apertou C, vai direto para LOOK_AT_WHITE_BALL
+        //depois disso vai apenas transicionar entre as duas e não volta mais pra bezier
+        if (g_CameraMode == BEZIER){
+            g_CameraMode = LOOKAT_WHITE_BALL;
+        }
         // Primeiro, alternamos o estado do modo de câmera livre.
-        g_FreeLookMode = !g_FreeLookMode;
-
-        if (g_FreeLookMode) // AGORA: Estamos no modo LIVRE (acabamos de ativar)
+        //g_FreeLookMode = !g_FreeLookMode;
+        // AGORA é diferente, alterna entre os dois estados, uma vez apertado C
+        if (g_CameraMode == LOOKAT_WHITE_BALL){
+            g_CameraMode = FREE_CAMERA;
+        }
+        else if (g_CameraMode == FREE_CAMERA){
+            g_CameraMode = LOOKAT_WHITE_BALL;
+        }
+        if (g_CameraMode == FREE_CAMERA) // AGORA: Estamos no modo LIVRE (acabamos de ativar)
         {
             // === TRANSITION ON: Do modo FIXO para o LIVRE ===
             // 1. SALVAR O ESTADO ATUAL DA CÂMERA FIXA (para restaurar ao sair)
@@ -1950,7 +2053,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     
         }
-        else // AGORA: Estamos no modo FIXO (acabamos de desativar)
+        else if (g_CameraMode == LOOKAT_WHITE_BALL) //GORA: Estamos no modo FIXO (acabamos de desativar)
         {
             // === TRANSITION OFF: Do modo LIVRE para o FIXO ===
             // 1. RESTAURAR o estado completo da câmera fixa para a posição anterior
@@ -2085,6 +2188,47 @@ void TextRendering_ShowProjection(GLFWwindow* window)
         TextRendering_PrintString(window, "Perspective", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
     else
         TextRendering_PrintString(window, "Orthographic", 1.0f-13*charwidth, -1.0f+2*lineheight/10, 1.0f);
+}
+
+// Menu rendering function
+void TextRendering_ShowMenu(GLFWwindow* window)
+{
+    // Only show menu if UI text is enabled and in BEZIER mode
+    if (!g_ShowInfoText || g_CameraMode != BEZIER)
+        return;
+
+    // Static buffers for menu text
+    static char buffer1[50] = "Aperte C para iniciar";
+    static char buffer2[50] = "T para ligar/desligar o taco";
+    static char buffer3[50] = "Segure P para dar uma tacada";
+    static char buffer4[50] = "O e P para trocar projecoes";
+
+    // Line height and char width for positioning
+    float lineheight = TextRendering_LineHeight(window);
+    float charwidth = TextRendering_CharWidth(window);
+
+    // Larger font scale for menu
+    float scale = 2.0f;
+
+    // Center each line horizontally (NDC: x from -1 to 1)
+    // Calculate x offset: -(length * charwidth * scale / 2)
+    float x1 = -(strlen(buffer1) * charwidth * scale / 2.0f);
+    float x2 = -(strlen(buffer2) * charwidth * scale / 2.0f);
+    float x3 = -(strlen(buffer3) * charwidth * scale / 2.0f);
+    float x4 = -(strlen(buffer4) * charwidth * scale / 2.0f);
+
+    // Position lines vertically (NDC: y from -1 to 1)
+    // Start at y=0.2 and space downward
+    float y1 = 0.2f;
+    float y2 = y1 - lineheight * scale;
+    float y3 = y2 - lineheight * scale;
+    float y4 = y3 - lineheight * scale;
+
+    // Render each line
+    TextRendering_PrintString(window, buffer1, x1, y1, scale);
+    TextRendering_PrintString(window, buffer2, x2, y2, scale);
+    TextRendering_PrintString(window, buffer3, x3, y3, scale);
+    TextRendering_PrintString(window, buffer4, x4, y4, scale);
 }
 
 // Escrevemos na tela a porcentagem da força da tacada.

@@ -119,6 +119,7 @@ void main()
     else if (object_id == TABLE)
     {
         Kd0 = texture(TextureImage[0], texcoords).rgb; // Use texcoords for table texture
+        vec3 Ks = vec3(0.05);          // Specular
     }
     else
     {
@@ -127,7 +128,7 @@ void main()
 
     // Lighting calculations
     vec3 Kd = Kd0;                // Diffuse
-    vec3 Ks = vec3(0.3);          // Specular
+    vec3 Ks = vec3(0.05);          // Specular
     float shininess = 64.0;       // Phong exponent
     vec3 Ia = vec3(1.0);          // Ambient light intensity
     vec3 ambient = 0.1 * Kd;      // Ambient term
