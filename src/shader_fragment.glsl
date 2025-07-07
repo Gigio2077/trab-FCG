@@ -135,8 +135,13 @@ void main()
     float lambert = max(dot(n.xyz, l.xyz), 0.0); // Diffuse term
     vec3 Id = vec3(1.0);          // Diffuse light intensity
     vec3 diffuse = lambert * Kd * Id;
-    vec3 r = reflect(-l.xyz, n.xyz); // Reflected vector
-    float spec = pow(max(dot(v.xyz, r), 0.0), shininess);
+// assim seria Phon apenas
+//    vec3 r = reflect(-l.xyz, n.xyz); // Reflected vector
+//  float spec = pow(max(dot(v.xyz, r), 0.0), shininess);
+    // assim é Blinn-Phong
+    vec3 h = normalize(l.xyz + v.xyz); // Half-vector
+    float spec = pow(max(dot(n.xyz, h), 0.0), shininess);
+
     vec3 Is = vec3(1.0);          // Specular light intensity
     vec3 specular = Ks * spec * Is;
 
