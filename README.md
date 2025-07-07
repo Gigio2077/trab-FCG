@@ -44,6 +44,10 @@
     float V = 0.5 + phi / M_PI;
 
 ```
+## Testes de intersecção e instâncias de objetos
+As bolinhas colidem entre si, e caem na caçapa. Todas bolinhas são instanciadas a partir do mesmo objeto.
+
+![alt text](https://github.com/Gigio2077/trab-FCG/blob/main/imagens_readme/gif_gameplay.gif)
 
 ## Contribuições de cada membro
 
