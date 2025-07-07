@@ -1,6 +1,6 @@
 # Sinuca Simulator v0.8
 
-
+![alt text](https://github.com/Gigio2077/trab-FCG/blob/main/imagens_readme/menu_mesa.gif)
 
 ## Conceitos aplicados de computação gráfica
 - Mapeamento de texturas (por coordenadas UV e sférico)
