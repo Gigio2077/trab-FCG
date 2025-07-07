@@ -1,4 +1,4 @@
-# Sinuca Simulator v0.8
+# Sinuca Simulator v 0.8
 
 ![alt text](https://github.com/Gigio2077/trab-FCG/blob/main/imagens_readme/menu_mesa.gif)
 
@@ -71,3 +71,7 @@
 Sim, utilizamos Grok e GPT para geração de código, e para rastrear erros.
 
 ## Passos necessários para compilação e execução
+No linux:
+```sh
+$ make run
+```
