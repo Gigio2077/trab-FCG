@@ -1,38 +1,38 @@
 [
 {
-  "directory": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/build",
-  "command": "C:\\msys64\\mingw64\\bin\\g++.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_CXX.rsp -g -std=c++11 -o CMakeFiles\\main.dir\\src\\main.cpp.obj -c C:\\Users\\ericd\\Desktop\\TRABALHO\\trab-FCG\\src\\main.cpp",
-  "file": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/main.cpp",
+  "directory": "C:/Users/ericd/Desktop/trab-FCG-1/build",
+  "command": "C:\\msys64\\mingw64\\bin\\g++.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_CXX.rsp -g -std=c++11 -o CMakeFiles\\main.dir\\src\\main.cpp.obj -c C:\\Users\\ericd\\Desktop\\trab-FCG-1\\src\\main.cpp",
+  "file": "C:/Users/ericd/Desktop/trab-FCG-1/src/main.cpp",
   "output": "CMakeFiles/main.dir/src/main.cpp.obj"
 },
 {
-  "directory": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/build",
-  "command": "C:\\msys64\\mingw64\\bin\\g++.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_CXX.rsp -g -std=c++11 -o CMakeFiles\\main.dir\\src\\textrendering.cpp.obj -c C:\\Users\\ericd\\Desktop\\TRABALHO\\trab-FCG\\src\\textrendering.cpp",
-  "file": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/textrendering.cpp",
+  "directory": "C:/Users/ericd/Desktop/trab-FCG-1/build",
+  "command": "C:\\msys64\\mingw64\\bin\\g++.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_CXX.rsp -g -std=c++11 -o CMakeFiles\\main.dir\\src\\textrendering.cpp.obj -c C:\\Users\\ericd\\Desktop\\trab-FCG-1\\src\\textrendering.cpp",
+  "file": "C:/Users/ericd/Desktop/trab-FCG-1/src/textrendering.cpp",
   "output": "CMakeFiles/main.dir/src/textrendering.cpp.obj"
 },
 {
-  "directory": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/build",
-  "command": "C:\\msys64\\mingw64\\bin\\g++.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_CXX.rsp -g -std=c++11 -o CMakeFiles\\main.dir\\src\\tiny_obj_loader.cpp.obj -c C:\\Users\\ericd\\Desktop\\TRABALHO\\trab-FCG\\src\\tiny_obj_loader.cpp",
-  "file": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/tiny_obj_loader.cpp",
+  "directory": "C:/Users/ericd/Desktop/trab-FCG-1/build",
+  "command": "C:\\msys64\\mingw64\\bin\\g++.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_CXX.rsp -g -std=c++11 -o CMakeFiles\\main.dir\\src\\tiny_obj_loader.cpp.obj -c C:\\Users\\ericd\\Desktop\\trab-FCG-1\\src\\tiny_obj_loader.cpp",
+  "file": "C:/Users/ericd/Desktop/trab-FCG-1/src/tiny_obj_loader.cpp",
   "output": "CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj"
 },
 {
-  "directory": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/build",
-  "command": "C:\\msys64\\mingw64\\bin\\g++.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_CXX.rsp -g -std=c++11 -o CMakeFiles\\main.dir\\src\\stb_image.cpp.obj -c C:\\Users\\ericd\\Desktop\\TRABALHO\\trab-FCG\\src\\stb_image.cpp",
-  "file": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/stb_image.cpp",
+  "directory": "C:/Users/ericd/Desktop/trab-FCG-1/build",
+  "command": "C:\\msys64\\mingw64\\bin\\g++.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_CXX.rsp -g -std=c++11 -o CMakeFiles\\main.dir\\src\\stb_image.cpp.obj -c C:\\Users\\ericd\\Desktop\\trab-FCG-1\\src\\stb_image.cpp",
+  "file": "C:/Users/ericd/Desktop/trab-FCG-1/src/stb_image.cpp",
   "output": "CMakeFiles/main.dir/src/stb_image.cpp.obj"
 },
 {
-  "directory": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/build",
-  "command": "C:\\msys64\\mingw64\\bin\\gcc.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_C.rsp -g -o CMakeFiles\\main.dir\\src\\glad.c.obj -c C:\\Users\\ericd\\Desktop\\TRABALHO\\trab-FCG\\src\\glad.c",
-  "file": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/glad.c",
+  "directory": "C:/Users/ericd/Desktop/trab-FCG-1/build",
+  "command": "C:\\msys64\\mingw64\\bin\\gcc.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_C.rsp -g -o CMakeFiles\\main.dir\\src\\glad.c.obj -c C:\\Users\\ericd\\Desktop\\trab-FCG-1\\src\\glad.c",
+  "file": "C:/Users/ericd/Desktop/trab-FCG-1/src/glad.c",
   "output": "CMakeFiles/main.dir/src/glad.c.obj"
 },
 {
-  "directory": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/build",
-  "command": "C:\\msys64\\mingw64\\bin\\g++.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_CXX.rsp -g -std=c++11 -o CMakeFiles\\main.dir\\src\\ObjModel.cpp.obj -c C:\\Users\\ericd\\Desktop\\TRABALHO\\trab-FCG\\src\\ObjModel.cpp",
-  "file": "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/ObjModel.cpp",
+  "directory": "C:/Users/ericd/Desktop/trab-FCG-1/build",
+  "command": "C:\\msys64\\mingw64\\bin\\g++.exe -D_USE_MATH_DEFINES @CMakeFiles/main.dir/includes_CXX.rsp -g -std=c++11 -o CMakeFiles\\main.dir\\src\\ObjModel.cpp.obj -c C:\\Users\\ericd\\Desktop\\trab-FCG-1\\src\\ObjModel.cpp",
+  "file": "C:/Users/ericd/Desktop/trab-FCG-1/src/ObjModel.cpp",
   "output": "CMakeFiles/main.dir/src/ObjModel.cpp.obj"
 }
 ]

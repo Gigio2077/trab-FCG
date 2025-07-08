@@ -52,10 +52,10 @@ RM = "C:\Program Files\CMake\bin\cmake.exe" -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = C:\Users\ericd\Desktop\TRABALHO\trab-FCG
+CMAKE_SOURCE_DIR = C:\Users\ericd\Desktop\trab-FCG-1
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = C:\Users\ericd\Desktop\TRABALHO\trab-FCG\build
+CMAKE_BINARY_DIR = C:\Users\ericd\Desktop\trab-FCG-1\build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/main.dir/depend.make
@@ -73,93 +73,93 @@ CMakeFiles/main.dir/codegen:
 
 CMakeFiles/main.dir/src/main.cpp.obj: CMakeFiles/main.dir/flags.make
 CMakeFiles/main.dir/src/main.cpp.obj: CMakeFiles/main.dir/includes_CXX.rsp
-CMakeFiles/main.dir/src/main.cpp.obj: C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/main.cpp
+CMakeFiles/main.dir/src/main.cpp.obj: C:/Users/ericd/Desktop/trab-FCG-1/src/main.cpp
 CMakeFiles/main.dir/src/main.cpp.obj: CMakeFiles/main.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\TRABALHO\trab-FCG\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/main.dir/src/main.cpp.obj"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/main.cpp.obj -MF CMakeFiles\main.dir\src\main.cpp.obj.d -o CMakeFiles\main.dir\src\main.cpp.obj -c C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\main.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\trab-FCG-1\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/main.dir/src/main.cpp.obj"
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/main.cpp.obj -MF CMakeFiles\main.dir\src\main.cpp.obj.d -o CMakeFiles\main.dir\src\main.cpp.obj -c C:\Users\ericd\Desktop\trab-FCG-1\src\main.cpp
 
 CMakeFiles/main.dir/src/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/main.cpp.i"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\main.cpp > CMakeFiles\main.dir\src\main.cpp.i
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\ericd\Desktop\trab-FCG-1\src\main.cpp > CMakeFiles\main.dir\src\main.cpp.i
 
 CMakeFiles/main.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/main.cpp.s"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\main.cpp -o CMakeFiles\main.dir\src\main.cpp.s
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\ericd\Desktop\trab-FCG-1\src\main.cpp -o CMakeFiles\main.dir\src\main.cpp.s
 
 CMakeFiles/main.dir/src/textrendering.cpp.obj: CMakeFiles/main.dir/flags.make
 CMakeFiles/main.dir/src/textrendering.cpp.obj: CMakeFiles/main.dir/includes_CXX.rsp
-CMakeFiles/main.dir/src/textrendering.cpp.obj: C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/textrendering.cpp
+CMakeFiles/main.dir/src/textrendering.cpp.obj: C:/Users/ericd/Desktop/trab-FCG-1/src/textrendering.cpp
 CMakeFiles/main.dir/src/textrendering.cpp.obj: CMakeFiles/main.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\TRABALHO\trab-FCG\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/main.dir/src/textrendering.cpp.obj"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/textrendering.cpp.obj -MF CMakeFiles\main.dir\src\textrendering.cpp.obj.d -o CMakeFiles\main.dir\src\textrendering.cpp.obj -c C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\textrendering.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\trab-FCG-1\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/main.dir/src/textrendering.cpp.obj"
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/textrendering.cpp.obj -MF CMakeFiles\main.dir\src\textrendering.cpp.obj.d -o CMakeFiles\main.dir\src\textrendering.cpp.obj -c C:\Users\ericd\Desktop\trab-FCG-1\src\textrendering.cpp
 
 CMakeFiles/main.dir/src/textrendering.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/textrendering.cpp.i"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\textrendering.cpp > CMakeFiles\main.dir\src\textrendering.cpp.i
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\ericd\Desktop\trab-FCG-1\src\textrendering.cpp > CMakeFiles\main.dir\src\textrendering.cpp.i
 
 CMakeFiles/main.dir/src/textrendering.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/textrendering.cpp.s"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\textrendering.cpp -o CMakeFiles\main.dir\src\textrendering.cpp.s
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\ericd\Desktop\trab-FCG-1\src\textrendering.cpp -o CMakeFiles\main.dir\src\textrendering.cpp.s
 
 CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj: CMakeFiles/main.dir/flags.make
 CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj: CMakeFiles/main.dir/includes_CXX.rsp
-CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj: C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/tiny_obj_loader.cpp
+CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj: C:/Users/ericd/Desktop/trab-FCG-1/src/tiny_obj_loader.cpp
 CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj: CMakeFiles/main.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\TRABALHO\trab-FCG\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj -MF CMakeFiles\main.dir\src\tiny_obj_loader.cpp.obj.d -o CMakeFiles\main.dir\src\tiny_obj_loader.cpp.obj -c C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\tiny_obj_loader.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\trab-FCG-1\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj"
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj -MF CMakeFiles\main.dir\src\tiny_obj_loader.cpp.obj.d -o CMakeFiles\main.dir\src\tiny_obj_loader.cpp.obj -c C:\Users\ericd\Desktop\trab-FCG-1\src\tiny_obj_loader.cpp
 
 CMakeFiles/main.dir/src/tiny_obj_loader.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/tiny_obj_loader.cpp.i"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\tiny_obj_loader.cpp > CMakeFiles\main.dir\src\tiny_obj_loader.cpp.i
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\ericd\Desktop\trab-FCG-1\src\tiny_obj_loader.cpp > CMakeFiles\main.dir\src\tiny_obj_loader.cpp.i
 
 CMakeFiles/main.dir/src/tiny_obj_loader.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/tiny_obj_loader.cpp.s"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\tiny_obj_loader.cpp -o CMakeFiles\main.dir\src\tiny_obj_loader.cpp.s
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\ericd\Desktop\trab-FCG-1\src\tiny_obj_loader.cpp -o CMakeFiles\main.dir\src\tiny_obj_loader.cpp.s
 
 CMakeFiles/main.dir/src/stb_image.cpp.obj: CMakeFiles/main.dir/flags.make
 CMakeFiles/main.dir/src/stb_image.cpp.obj: CMakeFiles/main.dir/includes_CXX.rsp
-CMakeFiles/main.dir/src/stb_image.cpp.obj: C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/stb_image.cpp
+CMakeFiles/main.dir/src/stb_image.cpp.obj: C:/Users/ericd/Desktop/trab-FCG-1/src/stb_image.cpp
 CMakeFiles/main.dir/src/stb_image.cpp.obj: CMakeFiles/main.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\TRABALHO\trab-FCG\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/main.dir/src/stb_image.cpp.obj"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/stb_image.cpp.obj -MF CMakeFiles\main.dir\src\stb_image.cpp.obj.d -o CMakeFiles\main.dir\src\stb_image.cpp.obj -c C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\stb_image.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\trab-FCG-1\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/main.dir/src/stb_image.cpp.obj"
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/stb_image.cpp.obj -MF CMakeFiles\main.dir\src\stb_image.cpp.obj.d -o CMakeFiles\main.dir\src\stb_image.cpp.obj -c C:\Users\ericd\Desktop\trab-FCG-1\src\stb_image.cpp
 
 CMakeFiles/main.dir/src/stb_image.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/stb_image.cpp.i"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\stb_image.cpp > CMakeFiles\main.dir\src\stb_image.cpp.i
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\ericd\Desktop\trab-FCG-1\src\stb_image.cpp > CMakeFiles\main.dir\src\stb_image.cpp.i
 
 CMakeFiles/main.dir/src/stb_image.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/stb_image.cpp.s"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\stb_image.cpp -o CMakeFiles\main.dir\src\stb_image.cpp.s
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\ericd\Desktop\trab-FCG-1\src\stb_image.cpp -o CMakeFiles\main.dir\src\stb_image.cpp.s
 
 CMakeFiles/main.dir/src/glad.c.obj: CMakeFiles/main.dir/flags.make
 CMakeFiles/main.dir/src/glad.c.obj: CMakeFiles/main.dir/includes_C.rsp
-CMakeFiles/main.dir/src/glad.c.obj: C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/glad.c
+CMakeFiles/main.dir/src/glad.c.obj: C:/Users/ericd/Desktop/trab-FCG-1/src/glad.c
 CMakeFiles/main.dir/src/glad.c.obj: CMakeFiles/main.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\TRABALHO\trab-FCG\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/main.dir/src/glad.c.obj"
-	C:\msys64\mingw64\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/main.dir/src/glad.c.obj -MF CMakeFiles\main.dir\src\glad.c.obj.d -o CMakeFiles\main.dir\src\glad.c.obj -c C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\glad.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\trab-FCG-1\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/main.dir/src/glad.c.obj"
+	C:\msys64\mingw64\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/main.dir/src/glad.c.obj -MF CMakeFiles\main.dir\src\glad.c.obj.d -o CMakeFiles\main.dir\src\glad.c.obj -c C:\Users\ericd\Desktop\trab-FCG-1\src\glad.c
 
 CMakeFiles/main.dir/src/glad.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/main.dir/src/glad.c.i"
-	C:\msys64\mingw64\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\glad.c > CMakeFiles\main.dir\src\glad.c.i
+	C:\msys64\mingw64\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E C:\Users\ericd\Desktop\trab-FCG-1\src\glad.c > CMakeFiles\main.dir\src\glad.c.i
 
 CMakeFiles/main.dir/src/glad.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/main.dir/src/glad.c.s"
-	C:\msys64\mingw64\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\glad.c -o CMakeFiles\main.dir\src\glad.c.s
+	C:\msys64\mingw64\bin\gcc.exe $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S C:\Users\ericd\Desktop\trab-FCG-1\src\glad.c -o CMakeFiles\main.dir\src\glad.c.s
 
 CMakeFiles/main.dir/src/ObjModel.cpp.obj: CMakeFiles/main.dir/flags.make
 CMakeFiles/main.dir/src/ObjModel.cpp.obj: CMakeFiles/main.dir/includes_CXX.rsp
-CMakeFiles/main.dir/src/ObjModel.cpp.obj: C:/Users/ericd/Desktop/TRABALHO/trab-FCG/src/ObjModel.cpp
+CMakeFiles/main.dir/src/ObjModel.cpp.obj: C:/Users/ericd/Desktop/trab-FCG-1/src/ObjModel.cpp
 CMakeFiles/main.dir/src/ObjModel.cpp.obj: CMakeFiles/main.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\TRABALHO\trab-FCG\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/main.dir/src/ObjModel.cpp.obj"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/ObjModel.cpp.obj -MF CMakeFiles\main.dir\src\ObjModel.cpp.obj.d -o CMakeFiles\main.dir\src\ObjModel.cpp.obj -c C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\ObjModel.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\ericd\Desktop\trab-FCG-1\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/main.dir/src/ObjModel.cpp.obj"
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/main.dir/src/ObjModel.cpp.obj -MF CMakeFiles\main.dir\src\ObjModel.cpp.obj.d -o CMakeFiles\main.dir\src\ObjModel.cpp.obj -c C:\Users\ericd\Desktop\trab-FCG-1\src\ObjModel.cpp
 
 CMakeFiles/main.dir/src/ObjModel.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/main.dir/src/ObjModel.cpp.i"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\ObjModel.cpp > CMakeFiles\main.dir\src\ObjModel.cpp.i
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\ericd\Desktop\trab-FCG-1\src\ObjModel.cpp > CMakeFiles\main.dir\src\ObjModel.cpp.i
 
 CMakeFiles/main.dir/src/ObjModel.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/main.dir/src/ObjModel.cpp.s"
-	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\ObjModel.cpp -o CMakeFiles\main.dir\src\ObjModel.cpp.s
+	C:\msys64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\ericd\Desktop\trab-FCG-1\src\ObjModel.cpp -o CMakeFiles\main.dir\src\ObjModel.cpp.s
 
 # Object files for target main
 main_OBJECTS = \
@@ -173,22 +173,22 @@ main_OBJECTS = \
 # External object files for target main
 main_EXTERNAL_OBJECTS =
 
-C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe: CMakeFiles/main.dir/src/main.cpp.obj
-C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe: CMakeFiles/main.dir/src/textrendering.cpp.obj
-C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe: CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj
-C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe: CMakeFiles/main.dir/src/stb_image.cpp.obj
-C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe: CMakeFiles/main.dir/src/glad.c.obj
-C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe: CMakeFiles/main.dir/src/ObjModel.cpp.obj
-C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe: CMakeFiles/main.dir/build.make
-C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe: C:/Users/ericd/Desktop/TRABALHO/trab-FCG/lib-mingw-64/libglfw3.a
-C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe: CMakeFiles/main.dir/linkLibs.rsp
-C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe: CMakeFiles/main.dir/objects1.rsp
-C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe: CMakeFiles/main.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=C:\Users\ericd\Desktop\TRABALHO\trab-FCG\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable C:\Users\ericd\Desktop\TRABALHO\trab-FCG\bin\Debug\main.exe"
+C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe: CMakeFiles/main.dir/src/main.cpp.obj
+C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe: CMakeFiles/main.dir/src/textrendering.cpp.obj
+C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe: CMakeFiles/main.dir/src/tiny_obj_loader.cpp.obj
+C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe: CMakeFiles/main.dir/src/stb_image.cpp.obj
+C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe: CMakeFiles/main.dir/src/glad.c.obj
+C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe: CMakeFiles/main.dir/src/ObjModel.cpp.obj
+C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe: CMakeFiles/main.dir/build.make
+C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe: C:/Users/ericd/Desktop/trab-FCG-1/lib-mingw-64/libglfw3.a
+C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe: CMakeFiles/main.dir/linkLibs.rsp
+C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe: CMakeFiles/main.dir/objects1.rsp
+C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe: CMakeFiles/main.dir/link.txt
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=C:\Users\ericd\Desktop\trab-FCG-1\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable C:\Users\ericd\Desktop\trab-FCG-1\bin\Debug\main.exe"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles\main.dir\link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
-CMakeFiles/main.dir/build: C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe
+CMakeFiles/main.dir/build: C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe
 .PHONY : CMakeFiles/main.dir/build
 
 CMakeFiles/main.dir/clean:
@@ -196,6 +196,6 @@ CMakeFiles/main.dir/clean:
 .PHONY : CMakeFiles/main.dir/clean
 
 CMakeFiles/main.dir/depend:
-	$(CMAKE_COMMAND) -E cmake_depends "MinGW Makefiles" C:\Users\ericd\Desktop\TRABALHO\trab-FCG C:\Users\ericd\Desktop\TRABALHO\trab-FCG C:\Users\ericd\Desktop\TRABALHO\trab-FCG\build C:\Users\ericd\Desktop\TRABALHO\trab-FCG\build C:\Users\ericd\Desktop\TRABALHO\trab-FCG\build\CMakeFiles\main.dir\DependInfo.cmake "--color=$(COLOR)"
+	$(CMAKE_COMMAND) -E cmake_depends "MinGW Makefiles" C:\Users\ericd\Desktop\trab-FCG-1 C:\Users\ericd\Desktop\trab-FCG-1 C:\Users\ericd\Desktop\trab-FCG-1\build C:\Users\ericd\Desktop\trab-FCG-1\build C:\Users\ericd\Desktop\trab-FCG-1\build\CMakeFiles\main.dir\DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/main.dir/depend
 

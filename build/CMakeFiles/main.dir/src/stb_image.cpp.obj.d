@@ -1,6 +1,6 @@
 CMakeFiles/main.dir/src/stb_image.cpp.obj: \
- C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\stb_image.cpp \
- C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/stb_image.h \
+ C:\Users\ericd\Desktop\trab-FCG-1\src\stb_image.cpp \
+ C:/Users/ericd/Desktop/trab-FCG-1/include/stb_image.h \
  C:/msys64/mingw64/include/stdio.h \
  C:/msys64/mingw64/include/corecrt_stdio_config.h \
  C:/msys64/mingw64/include/corecrt.h C:/msys64/mingw64/include/_mingw.h \

@@ -1,7 +1,7 @@
 CMakeFiles/main.dir/src/ObjModel.cpp.obj: \
- C:\Users\ericd\Desktop\TRABALHO\trab-FCG\src\ObjModel.cpp \
- C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/ObjModel.h \
- C:/Users/ericd/Desktop/TRABALHO/trab-FCG/include/tiny_obj_loader.h \
+ C:\Users\ericd\Desktop\trab-FCG-1\src\ObjModel.cpp \
+ C:/Users/ericd/Desktop/trab-FCG-1/include/ObjModel.h \
+ C:/Users/ericd/Desktop/trab-FCG-1/include/tiny_obj_loader.h \
  C:/msys64/mingw64/include/c++/13.2.0/map \
  C:/msys64/mingw64/include/c++/13.2.0/bits/requires_hosted.h \
  C:/msys64/mingw64/include/c++/13.2.0/x86_64-w64-mingw32/bits/c++config.h \

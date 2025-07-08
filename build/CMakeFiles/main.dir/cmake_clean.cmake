@@ -1,7 +1,7 @@
 file(REMOVE_RECURSE
-  "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe"
-  "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.exe.manifest"
-  "C:/Users/ericd/Desktop/TRABALHO/trab-FCG/bin/Debug/main.pdb"
+  "C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe"
+  "C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.exe.manifest"
+  "C:/Users/ericd/Desktop/trab-FCG-1/bin/Debug/main.pdb"
   "CMakeFiles/main.dir/src/ObjModel.cpp.obj"
   "CMakeFiles/main.dir/src/ObjModel.cpp.obj.d"
   "CMakeFiles/main.dir/src/glad.c.obj"

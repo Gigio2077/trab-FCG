@@ -3,13 +3,6 @@
 //       Departamento de Informática Aplicada
 //
 
-// Arquivos "headers" padrões de C podem ser incluídos em um
-// programa C++, sendo necessário somente adicionar o caractere
-// "c" antes de seu nome, e remover o sufixo ".h". Exemplo:
-//    #include <stdio.h> // Em C
-//  vira
-//    #include <cstdio> // Em C++
-//
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -33,8 +26,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/quaternion.hpp> 
-#include <glm/gtx/quaternion.hpp> 
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 // Headers da biblioteca para carregar modelos obj
 #include <tiny_obj_loader.h>
@@ -45,6 +38,7 @@
 #include "utils.h"
 #include "matrices.h"
 #include "ObjModel.h"
+
 
 // Declaração de funções utilizadas para pilha de matrizes de modelagem.
 void PushMatrix(glm::mat4 M);
@@ -94,8 +88,6 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
-
-
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
 struct SceneObject
@@ -109,13 +101,11 @@ struct SceneObject
     glm::vec3    bbox_max;
 };
 
-
-
 // Estrutura para representar uma bola no jogo, com propriedades básicas.
 // Usada aqui para depurar o movimento da bola.
 struct GameBall {
         glm::vec3 position;
-        glm::vec3 velocity; 
+        glm::vec3 velocity;
         float radius;
         bool  active;
         std::string object_name;
@@ -125,6 +115,7 @@ struct GameBall {
         glm::quat orientation;
         glm::vec3 angular_velocity;
     };
+
 
 // Variável global para armazenar todas as bolas do jogo
 std::vector<GameBall> g_Balls;
@@ -194,7 +185,7 @@ bool g_ShowInfoText = true;
 // Variável que controla se o modo de câmera livre está ativo
 // bool g_FreeLookMode = false;
 
-// Agora há 3 estados de câmera, freeLook, look_at e menu, e 
+// Agora há 3 estados de câmera, freeLook, look_at e menu, e
 // Camera mode enum
 enum CameraMode {
     LOOKAT_WHITE_BALL, // Look at white ball (fixed mode)
@@ -202,22 +193,30 @@ enum CameraMode {
     BEZIER             // Bézier curve for game menu
 };
 // Estou instanciando fora da main para que não precise passar como parametro para as respectivas funcoes
-CameraMode g_CameraMode = BEZIER; 
+CameraMode g_CameraMode = BEZIER;
 
 
-
-
-
-
+// A simple grid structure to store ball indices
+std::vector<std::vector<std::vector<size_t>>> spatialGrid;
 
 bool g_CueBallPositioningMode = false;
 
 // Altura fixa em Y para o CENTRO das bolas quando elas estão apoiadas na mesa.
 const float BALL_Y_AXIS = -0.2667f; // Valor fornecido pelo usuário.
-const float BALL_VIRTUAL_RADIUS = 0.02625f; 
+const float BALL_VIRTUAL_RADIUS = 0.02625f;
+
+
+const float TABLE_WIDTH = 1.04150000f ;
+const float TABLE_DEPTH = 2.28450000f ;
+const float TABLE_HALF_WIDTH = TABLE_WIDTH/2;
+const float TABLE_HALF_DEPTH = TABLE_DEPTH/2;
+
+const float GRID_CELL_SIZE = BALL_VIRTUAL_RADIUS * 4.0f; // Example: 4 times ball radius
+const int GRID_COLS = static_cast<int>(TABLE_WIDTH / GRID_CELL_SIZE) + 1;
+const int GRID_ROWS = static_cast<int>(TABLE_DEPTH / GRID_CELL_SIZE) + 1;
 
 // Raio das esferas que representam as caçapas (para visualização e colisão)
-const float POCKET_SPHERE_RADIUS = 0.1f; 
+const float POCKET_SPHERE_RADIUS = 0.1f;
 
 
 // Constantes para o posicionamento das bolas no rack triangular
@@ -245,6 +244,13 @@ const float BALL_FRICTION_FACTOR = 0.99f; // Fator de atrito para desacelerar a 
 const float COLLISION_EPSILON = 0.001f; // Pequeno valor para evitar problemas de "colar" na parede.
 const float VELOCITY_STOP_THRESHOLD = 0.01f; // Limiar para zerar velocidade quando muito baixa.
 
+
+
+const int PHYSICS_SUBSTEPS = 5; // Experiment with this value
+float fixedDeltaTime = 1.0f / 60.0f; // Target 60 physics updates per second, for example
+float subDeltaTime = fixedDeltaTime / PHYSICS_SUBSTEPS;
+
+const float FIXED_PHYSICS_DELTA_TIME = 1.0f / 120.0f; // Target 120 physics updates per second
 
 
 // Variáveis para o sistema de barra de força (Power Shot)
@@ -290,14 +296,14 @@ std::vector<Pocket> g_Pockets; // Variável global para armazenar todas as caça
 #define SPHERE 0
 #define PLANE  1
 #define TABLE  2
-#define LINE   3 
+#define LINE   3
 
 // Variáveis para a posição da câmera no modo livre
 // Inicie com valores que façam sentido para o seu cenário (ex: acima do plano da mesa)
-glm::vec4 g_FreeCameraPosition = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); 
-glm::vec4 g_FreeCameraStartPosition = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f); 
+glm::vec4 g_FreeCameraPosition = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+glm::vec4 g_FreeCameraStartPosition = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 // Velocidade de movimento da câmera em cm/s (ajuste este valor para o que parecer natural)
-float g_CameraSpeed = 2.0f; // 
+float g_CameraSpeed = 2.0f; //
 
 
 
@@ -326,7 +332,7 @@ GLuint g_NumLoadedTextures = 0;
 
 
 // Calculate a point on a cubic Bézier curve for 2D (X, Z)
-glm::vec2 CalculateBezierPoint(float t, const glm::vec2& p0, const glm::vec2& p1, 
+glm::vec2 CalculateBezierPoint(float t, const glm::vec2& p0, const glm::vec2& p1,
                               const glm::vec2& p2, const glm::vec2& p3)
 {
     float u = 1.0f - t;
@@ -341,6 +347,26 @@ glm::vec2 CalculateBezierPoint(float t, const glm::vec2& p0, const glm::vec2& p1
     point += ttt * p3;
 
     return point;
+}
+
+void updateSpatialGrid(const std::vector<GameBall>& balls) {
+    // Clear the grid
+    spatialGrid.assign(GRID_COLS, std::vector<std::vector<size_t>>(GRID_ROWS));
+
+    for (size_t i = 0; i < balls.size(); ++i) {
+        if (!balls[i].active) continue;
+
+        // Calculate grid cell for the ball's position
+        // You'll need to map your table coordinates to grid indices (e.g., 0 to GRID_COLS-1)
+        int col = static_cast<int>((balls[i].position.x + TABLE_HALF_WIDTH) / GRID_CELL_SIZE);
+        int row = static_cast<int>((balls[i].position.z + TABLE_HALF_DEPTH) / GRID_CELL_SIZE);
+
+        // Clamp to ensure indices are within bounds
+        col = glm::clamp(col, 0, GRID_COLS - 1);
+        row = glm::clamp(row, 0, GRID_ROWS - 1);
+
+        spatialGrid[col][row].push_back(i);
+    }
 }
 
 int main(int argc, char* argv[])
@@ -372,7 +398,7 @@ int main(int argc, char* argv[])
     // Criamos uma janela do sistema operacional, com 800 colunas e 600 linhas
     // de pixels, e com título "INF01047 ...".
     GLFWwindow* window;
-    window = glfwCreateWindow(1920, 1080, "Sinuca Simulator- v0.8", NULL, NULL);
+    window = glfwCreateWindow(800, 600, "Sinuca Simulator- v0.9", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -407,7 +433,7 @@ int main(int argc, char* argv[])
     // Agora, chamamos o callback com as dimensões REAIS obtidas.
     FramebufferSizeCallback(window, initial_framebuffer_width, initial_framebuffer_height);
 
-    
+
     // Inicialmente, definimos um quadrado 1x1 no plano XZ, centrado em (0,0)
     // Estes são os 4 vértices que formarão o retângulo da linha (serão atualizados dinamicamente)
     float line_vertices_initial[] = {
@@ -435,14 +461,14 @@ int main(int argc, char* argv[])
     glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertices_initial), line_vertices_initial, GL_STATIC_DRAW);
 
     // EBO para os índices da linha
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, lineEBO); // <<=== LIGAR O EBO
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(line_indices_initial), line_indices_initial, GL_STATIC_DRAW); 
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, lineEBO); 
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(line_indices_initial), line_indices_initial, GL_STATIC_DRAW);
 
     // Supondo que o layout location 0 seja a posição (vec3 a_position no vertex shader)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0); // 3 componentes (X,Y,Z)
     glEnableVertexAttribArray(0);
 
-    glBindVertexArray(0); // Desliga o VAO*/
+    glBindVertexArray(0); // Desligar o VAO para evitar modificações acidentais
 
 
     // Imprimimos no terminal informações sobre a GPU do sistema
@@ -458,13 +484,13 @@ int main(int argc, char* argv[])
     LoadShadersFromFiles();
 
     // Carregamos duas imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/10523_Pool_Table_v1_Diffuse.jpg"); 
-    
+    LoadTextureImage("../../data/10523_Pool_Table_v1_Diffuse.jpg");
+
     //Carregar as texturas das 15 bolas
     for (int i = 1; i < 16; i++)
     {
         std::string filename = "../../data/balls_textures/" + std::to_string(i) + ".jpg";
-        LoadTextureImage(filename.c_str()); 
+        LoadTextureImage(filename.c_str());
     }
 
     // Construímos a representação de objetos geométricos através de malhas de triângulos
@@ -490,7 +516,7 @@ int main(int argc, char* argv[])
     // 1. Inicializa o vetor global de bolas
     g_Balls.clear(); // Limpa o vetor se ele já contiver algo
 
-    // 2. Bola Branca (Cue Ball) 
+    // 2. Bola Branca (Cue Ball)
     GameBall cueBall;
     cueBall.radius = BALL_VIRTUAL_RADIUS;
     cueBall.position = glm::vec3(-0.0020f, BALL_Y_AXIS, 0.5680f); // Posição inicial da bola branca
@@ -503,7 +529,7 @@ int main(int argc, char* argv[])
     cueBall.texture_unit_index = 0; // Unidade de textura para a bola branca
     g_Balls.push_back(cueBall);
 
-    // === INICIALIZAÇÃO DA BOLA DE DEPURACAO (Temporariamente ÚNICA) 
+    // === INICIALIZAÇÃO DA BOLA DE DEPURACAO (Temporariamente ÚNICA)
     g_DebugBall.radius = 0.1; // Usa a constante de raio que já existe
     g_DebugBall.position = glm::vec3(-0.03f, BALL_Y_AXIS, 0.5680f); // Posição inicial para começar o debug.
     g_DebugBall.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Velocidade inicial zero (não será usada na física manual)
@@ -545,7 +571,7 @@ int main(int argc, char* argv[])
         }
         if (ball_id_counter > 15) break; // Se todas as 15 bolas já foram adicionadas, sai do loop externo também
     }
-    
+
     // === INICIALIZAÇÃO DOS SEGMENTOS DE TABELA ===
     // Segmento 1
     g_TableSegments.push_back({glm::vec3(TABLE_X_MAX_BALL_CENTER, BALL_Y_AXIS, -0.0730f), glm::vec3(TABLE_X_MAX_BALL_CENTER, BALL_Y_AXIS, -1.0480f)});
@@ -559,7 +585,7 @@ int main(int argc, char* argv[])
     g_TableSegments.push_back({glm::vec3(-0.4400f, BALL_Y_AXIS, TABLE_Z_MAX_BALL_CENTER), glm::vec3(0.4340f, BALL_Y_AXIS, TABLE_Z_MAX_BALL_CENTER)});
     // Segmento 6
     g_TableSegments.push_back({glm::vec3(TABLE_X_MAX_BALL_CENTER , BALL_Y_AXIS, 1.0520f), glm::vec3(TABLE_X_MAX_BALL_CENTER, BALL_Y_AXIS, 0.0770f)});
-    
+
 
     // Caçapa Superior Esquerda
     g_PocketEntrySegments.push_back({glm::vec3(-0.5200f, BALL_Y_AXIS, 1.0530f), glm::vec3(-0.5500f, BALL_Y_AXIS, 1.0780f)});
@@ -585,7 +611,7 @@ int main(int argc, char* argv[])
     g_PocketEntrySegments.push_back({glm::vec3(0.4380f, BALL_Y_AXIS, -1.1480f), glm::vec3(0.4640f, BALL_Y_AXIS, -1.1740f)});
     g_PocketEntrySegments.push_back({glm::vec3(0.5200f, BALL_Y_AXIS, -1.0540f), glm::vec3(0.5480f, BALL_Y_AXIS, -1.0800f)});
     // ========================================================
-    
+
 
     // As 6 caçapas com raio 0.1 e BALL_Y_AXIS como coordenada Y
     g_Pockets.push_back({glm::vec3(0.5500f, BALL_Y_AXIS, 1.1900f), POCKET_SPHERE_RADIUS});
@@ -639,7 +665,215 @@ int main(int argc, char* argv[])
         float deltaTime = (float)(currentFrameTime - lastFrameTime);
         lastFrameTime = currentFrameTime;
         //fprintf(stdout, "DEBUG: DeltaTime: %.4f\n", deltaTime); // Para depuração, se necessário
-        
+        // Accumulator for fixed time steps
+        static float physics_accumulator = 0.0f;
+        physics_accumulator += deltaTime; // deltaTime from your existing calculation
+
+
+
+        // Loop para garantir que a física seja atualizada em passos de tempo fixos
+        while (physics_accumulator >= FIXED_PHYSICS_DELTA_TIME)
+        {
+            // Update the spatial grid once per physics step with the current ball positions
+            // This must happen BEFORE any ball-to-ball checks using the grid.
+            updateSpatialGrid(g_Balls);
+
+            // === LÓGICA DE FÍSICA PARA TODAS AS BOLAS ===
+            for (size_t i = 0; i < g_Balls.size(); ++i)
+            {
+                GameBall& ball_A = g_Balls[i]; // Bola atual (referenciada como ball_A)
+                if (!ball_A.active) continue; // Pula bolas que não estão ativas (caíram na caçapa)
+
+                // --- 1. Física Individual para ball_A (Gravidade, Atrito, Feltro) ---
+                // IMPORTANT: Use FIXED_PHYSICS_DELTA_TIME here!
+                ball_A.velocity.y -= GRAVITY * FIXED_PHYSICS_DELTA_TIME;
+                ball_A.position += ball_A.velocity * FIXED_PHYSICS_DELTA_TIME;
+                ball_A.velocity.x *= BALL_FRICTION_FACTOR;
+                ball_A.velocity.z *= BALL_FRICTION_FACTOR;
+
+                if (glm::length(glm::vec2(ball_A.velocity.x, ball_A.velocity.z)) < VELOCITY_STOP_THRESHOLD)
+                {
+                    ball_A.velocity.x = 0.0f;
+                    ball_A.velocity.z = 0.0f;
+                }
+                // === CALCULAR VELOCIDADE ANGULAR E ATUALIZAR ORIENTAÇÃO (ROLLING)
+                glm::vec3 linear_velocity_xz = glm::vec3(ball_A.velocity.x, 0.0f, ball_A.velocity.z);
+                float linear_speed_xz = glm::length(linear_velocity_xz);
+                if (linear_speed_xz > VELOCITY_STOP_THRESHOLD) // Só calcula rolamento se a bola estiver se movendo
+                {
+                    glm::vec3 surface_normal = glm::vec3(0.0f, 1.0f, 0.0f);
+                    ball_A.angular_velocity = glm::cross(surface_normal, linear_velocity_xz) / ball_A.radius;
+
+                    glm::quat frame_rotation = glm::angleAxis(glm::length(ball_A.angular_velocity) * FIXED_PHYSICS_DELTA_TIME, glm::normalize(ball_A.angular_velocity));
+                    ball_A.orientation = glm::normalize(frame_rotation * ball_A.orientation);
+                }
+                else // Bola parada, zera velocidade angular e para de girar
+                {
+                    ball_A.angular_velocity = glm::vec3(0.0f, 0.0f, 0.0f);
+                }
+
+                // Colisão com o Feltro da Mesa (Chão) para ball_A
+                if (ball_A.position.y - ball_A.radius < FELT_SURFACE_Y_ACTUAL)
+                {
+                    ball_A.position.y = FELT_SURFACE_Y_ACTUAL + ball_A.radius;
+                    ball_A.velocity.y *= -1.0f * RESTITUTION_COEFF;
+                    if (glm::abs(ball_A.velocity.y) < VELOCITY_STOP_THRESHOLD) {
+                        ball_A.velocity.y = 0.0f;
+                        ball_A.position.y = FELT_SURFACE_Y_ACTUAL + ball_A.radius;
+                    }
+                }
+
+                // === OPTIMIZED BALL-TO-BALL COLLISION TEST (using spatial grid) ===
+                // This block replaces the previous inefficient nested loop for ball-to-ball collisions.
+                // It iterates over neighboring cells from the spatial grid.
+                int col_A = static_cast<int>((ball_A.position.x + TABLE_HALF_WIDTH) / GRID_CELL_SIZE);
+                int row_A = static_cast<int>((ball_A.position.z + TABLE_HALF_DEPTH) / GRID_CELL_SIZE);
+
+                col_A = glm::clamp(col_A, 0, GRID_COLS - 1);
+                row_A = glm::clamp(row_A, 0, GRID_ROWS - 1);
+
+                for (int dc = -1; dc <= 1; ++dc) {
+                    for (int dr = -1; dr <= 1; ++dr) {
+                        int current_col = col_A + dc;
+                        int current_row = row_A + dr;
+
+                        // Ensure neighbor cell is within bounds
+                        if (current_col >= 0 && current_col < GRID_COLS &&
+                            current_row >= 0 && current_row < GRID_ROWS)
+                        {
+                            for (size_t j_idx : spatialGrid[current_col][current_row]) {
+                                // Avoid checking ball against itself and avoid duplicate checks (i vs j, then j vs i)
+                                if (j_idx <= i) continue;
+
+                                GameBall& ball_B = g_Balls[j_idx]; //
+                                if (!ball_B.active) continue; // Pula se a bola B não estiver ativa
+
+                                // 1. DETECÇÃO DE COLISÃO
+                                glm::vec3 distance_vector = ball_A.position - ball_B.position; // Vetor da bola B para a bola A
+                                float distance = glm::length(distance_vector); // Distância entre os centros
+                                float sum_of_radii = ball_A.radius + ball_B.radius; // Soma dos raios
+
+                                if (distance < sum_of_radii) // Colisão detectada (penetração)!
+                                {
+                                    // 2. RESOLUÇÃO DE POSIÇÃO (Evitar Penetração)
+                                    float penetration_depth = sum_of_radii - distance;
+                                    glm::vec3 separation_vector = glm::normalize(distance_vector);
+
+                                    ball_A.position += separation_vector * (penetration_depth / 2.0f);
+                                    ball_B.position -= separation_vector * (penetration_depth / 2.0f);
+
+                                    // 3. RESOLUÇÃO DE VELOCIDADE (Colisão Elástica/Inelástica)
+                                    glm::vec3 normal_collision_vector = glm::normalize(distance_vector);
+                                    glm::vec3 relative_velocity = ball_A.velocity - ball_B.velocity;
+                                    float velocity_along_normal = glm::dot(relative_velocity, normal_collision_vector);
+
+                                    if (velocity_along_normal > 0) // Se as bolas já estão se separando, ou não se movendo para colidir, não há nova colisão a resolver.
+                                        continue;
+
+                                    float impulse_magnitude = (-(1.0f + RESTITUTION_COEFF) * velocity_along_normal) / (2.0f);
+                                    glm::vec3 impulse = impulse_magnitude * normal_collision_vector;
+
+                                    ball_A.velocity += impulse;
+                                    ball_B.velocity -= impulse;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // TESTE COLISAO BOLA E ENTRADA DA CACAPA
+                for (const auto& segment : g_PocketEntrySegments)
+                {
+                    glm::vec2 segment_vec = glm::vec2(segment.p2.x - segment.p1.x, segment.p2.z - segment.p1.z);
+                    glm::vec2 ball_to_p1_vec = glm::vec2(ball_A.position.x - segment.p1.x, ball_A.position.z - segment.p1.z);
+
+                    float t = glm::dot(ball_to_p1_vec, segment_vec) / glm::dot(segment_vec, segment_vec);
+                    t = glm::clamp(t, 0.0f, 1.0f);
+
+                    glm::vec2 closest_point_on_segment = glm::vec2(segment.p1.x, segment.p1.z) + t * segment_vec;
+                    glm::vec2 normal_vec_2d = glm::vec2(ball_A.position.x, ball_A.position.z) - closest_point_on_segment;
+                    float distance = glm::length(normal_vec_2d);
+
+                    if (distance < ball_A.radius) // Colisão se distância < raio
+                    {
+                        glm::vec2 collision_normal_2d = glm::normalize(normal_vec_2d);
+                        float penetration_depth = ball_A.radius - distance;
+                        ball_A.position.x += collision_normal_2d.x * penetration_depth;
+                        ball_A.position.z += collision_normal_2d.y * penetration_depth;
+
+                        glm::vec2 velocity_2d = glm::vec2(ball_A.velocity.x, ball_A.velocity.z);
+                        float dot_product = glm::dot(velocity_2d, collision_normal_2d);
+
+                        if (dot_product < 0) // Se movendo contra a parede
+                        {
+                            glm::vec2 reflected_velocity_2d = velocity_2d - (2.0f * dot_product * collision_normal_2d);
+                            reflected_velocity_2d *= RESTITUTION_COEFF;
+
+                            ball_A.velocity.x = reflected_velocity_2d.x;
+                            ball_A.velocity.z = reflected_velocity_2d.y;
+                        }
+                    }
+                }
+
+                //TESTE DE COLISÃO COM AS TABELAS
+                for (const auto& segment : g_TableSegments)
+                {
+                    glm::vec2 segment_vec = glm::vec2(segment.p2.x - segment.p1.x, segment.p2.z - segment.p1.z);
+                    glm::vec2 ball_to_p1_vec = glm::vec2(ball_A.position.x - segment.p1.x, ball_A.position.z - segment.p1.z);
+                    float t = glm::dot(ball_to_p1_vec, segment_vec) / glm::dot(segment_vec, segment_vec);
+                    t = glm::clamp(t, 0.0f, 1.0f);
+                    glm::vec2 closest_point_on_segment = glm::vec2(segment.p1.x, segment.p1.z) + t * segment_vec;
+                    glm::vec2 normal_vec_2d = glm::vec2(ball_A.position.x, ball_A.position.z) - closest_point_on_segment;
+                    float distance = glm::length(normal_vec_2d);
+
+                    if (distance < ball_A.radius)
+                    {
+                        glm::vec2 collision_normal_2d = glm::normalize(normal_vec_2d);
+                        float penetration_depth = ball_A.radius - distance;
+                        ball_A.position.x += collision_normal_2d.x * penetration_depth;
+                        ball_A.position.z += collision_normal_2d.y * penetration_depth;
+
+                        glm::vec2 velocity_2d = glm::vec2(ball_A.velocity.x, ball_A.velocity.z);
+                        float dot_product = glm::dot(velocity_2d, collision_normal_2d);
+
+                        if (dot_product < 0)
+                        {
+                            glm::vec2 reflected_velocity_2d = velocity_2d - (2.0f * dot_product * collision_normal_2d);
+                            reflected_velocity_2d *= RESTITUTION_COEFF;
+                            ball_A.velocity.x = reflected_velocity_2d.x;
+                            ball_A.velocity.z = reflected_velocity_2d.y;
+                        }
+                    }
+                }
+
+                // === TESTE DE COLISÃO BOLA-CAÇAPA (esferas) ===
+                for (const auto& pocket : g_Pockets)
+                {
+                    float distance = glm::length(ball_A.position - pocket.position);
+                    if (distance <= (ball_A.radius + pocket.radius))
+                    {
+                        if (ball_A.texture_unit_index == 0) // <<=== VERIFICA SE É A BOLA BRANCA
+                        {
+                            g_CueBallPositioningMode = true; // Entra no modo de posicionamento
+                            ball_A.position = glm::vec3(-0.0020f, BALL_Y_AXIS, 0.5680f); // Posição de reposicionamento
+                            ball_A.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Zera a velocidade
+                            fprintf(stdout, "DEBUG: Bola branca encacapada! Entrando no modo de posicionamento.\n");
+                        }
+                        else // Se for qualquer outra bola (não a branca)
+                        {
+                            ball_A.active = false; // Desativa a bola
+                            ball_A.position = glm::vec3(1000.0f, 1000.0f, 1000.0f); // Move para longe da cena
+                            ball_A.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Zera a velocidade
+                            fprintf(stdout, "DEBUG: Bola encacapada! Pos: (%.4f, %.4f, %.4f)\n", ball_A.position.x, ball_A.position.y, ball_A.position.z);
+                        }
+                        fflush(stdout);
+                        break; // A bola já caiu, não precisa testar outras caçapas para esta bola.
+                    }
+                }
+            }
+            physics_accumulator -= FIXED_PHYSICS_DELTA_TIME; // Decrement accumulator after each physics step
+        }
+
 
         if (g_P_KeyHeld)
         {
@@ -649,7 +883,7 @@ int main(int argc, char* argv[])
 
             // Atualiza a porcentagem da força com o efeito "ping-pong"
             g_CurrentShotPowerPercentage += g_ShotPowerPingPongDirection * (100.0f / g_MaxShotChargeTime) * deltaTime;
-            
+
             // Inverte a direção do ping-pong se atingir os limites
             if (g_CurrentShotPowerPercentage >= 100.0f) {
                 g_CurrentShotPowerPercentage = 100.0f; // Garante que não ultrapasse 100%
@@ -661,214 +895,7 @@ int main(int argc, char* argv[])
             //fprintf(stdout, "DEBUG: Forca: %.2f%%\n", g_CurrentShotPowerPercentage); fflush(stdout);
         }
 
-        // === LÓGICA DE FÍSICA PARA TODAS AS BOLAS ===
-        for (size_t i = 0; i < g_Balls.size(); ++i) 
-        {
-            GameBall& ball_A = g_Balls[i]; // Bola atual (referenciada como ball_A)
-            if (!ball_A.active) continue; // Pula bolas que não estão ativas (caíram na caçapa)
 
-            // --- 1. Física Individual para ball_A (Gravidade, Atrito, Feltro) ---
-            // Estas linhas já estão no seu código, apenas certificamos que estão aqui para ball_A
-            ball_A.velocity.y -= GRAVITY * deltaTime;
-            ball_A.position += ball_A.velocity * deltaTime;
-            ball_A.velocity.x *= BALL_FRICTION_FACTOR;
-            ball_A.velocity.z *= BALL_FRICTION_FACTOR;
-
-            if (glm::length(glm::vec2(ball_A.velocity.x, ball_A.velocity.z)) < VELOCITY_STOP_THRESHOLD)
-            {
-                ball_A.velocity.x = 0.0f;
-                ball_A.velocity.z = 0.0f;
-            }
-            // === CALCULAR VELOCIDADE ANGULAR E ATUALIZAR ORIENTAÇÃO (ROLLING)
-            glm::vec3 linear_velocity_xz = glm::vec3(ball_A.velocity.x, 0.0f, ball_A.velocity.z); // Apenas componentes XZ da velocidade
-            float linear_speed_xz = glm::length(linear_velocity_xz); // Magnitude da velocidade no plano XZ
-            if (linear_speed_xz > VELOCITY_STOP_THRESHOLD) // Só calcula rolamento se a bola estiver se movendo
-            {
-                glm::vec3 surface_normal = glm::vec3(0.0f, 1.0f, 0.0f); // Vetor "para cima" da mesa
-                // Velocidade angular = (Normal x Velocidade Linear) / Raio
-                ball_A.angular_velocity = glm::cross(surface_normal, linear_velocity_xz) / ball_A.radius;
-
-                // Atualiza a orientação da bola usando a velocidade angular e deltaTime
-                // Rotacao = angleAxis(angulo, eixo_de_rotacao)
-                // Angulo de rotação = magnitude(velocidade_angular) * deltaTime
-                // Eixo de rotação = normalizar(velocidade_angular)
-
-                // Cria um quatérnio de rotação para este frame
-                glm::quat frame_rotation = glm::angleAxis(glm::length(ball_A.angular_velocity) * deltaTime, glm::normalize(ball_A.angular_velocity));
-
-                // Aplica a rotação ao quatérnio de orientação atual da bola
-                ball_A.orientation = glm::normalize(frame_rotation * ball_A.orientation); // Multiplica a nova rotação pela antiga
-            }
-            else // Bola parada, zera velocidade angular e para de girar
-            {
-                ball_A.angular_velocity = glm::vec3(0.0f, 0.0f, 0.0f);
-            }
-
-            // Colisão com o Feltro da Mesa (Chão) para ball_A
-            if (ball_A.position.y - ball_A.radius < FELT_SURFACE_Y_ACTUAL)
-            {
-                ball_A.position.y = FELT_SURFACE_Y_ACTUAL + ball_A.radius;
-                ball_A.velocity.y *= -1.0f * RESTITUTION_COEFF;
-                if (glm::abs(ball_A.velocity.y) < VELOCITY_STOP_THRESHOLD) {
-                    ball_A.velocity.y = 0.0f;
-                    ball_A.position.y = FELT_SURFACE_Y_ACTUAL + ball_A.radius;
-                }
-            }
-
-            // TESTE DE COLISÃO BOLA-BOLA (Entre ball_A e todas as outras ball_B) ===
-            // Este loop aninhado garante que cada par de bolas seja verificado apenas uma vez (evita A vs B e B vs A, e A vs A).
-            for (size_t j = i + 1; j < g_Balls.size(); ++j)
-            {
-                GameBall& ball_B = g_Balls[j]; // Segunda bola no par
-                if (!ball_B.active) continue; // Pula se a bola B não estiver ativa
-
-                // 1. DETECÇÃO DE COLISÃO
-                glm::vec3 distance_vector = ball_A.position - ball_B.position; // Vetor da bola B para a bola A
-                float distance = glm::length(distance_vector); // Distância entre os centros
-                float sum_of_radii = ball_A.radius + ball_B.radius; // Soma dos raios
-
-                if (distance < sum_of_radii) // Colisão detectada (penetração)!
-                {
-                    // 2. RESOLUÇÃO DE POSIÇÃO (Evitar Penetração)
-                    float penetration_depth = sum_of_radii - distance;
-                    // Move as bolas para fora uma da outra. Divide a penetração igualmente.
-                    // separation_vector aponta de B para A (normal da colisão)
-                    glm::vec3 separation_vector = glm::normalize(distance_vector); 
-                    
-                    ball_A.position += separation_vector * (penetration_depth / 2.0f);
-                    ball_B.position -= separation_vector * (penetration_depth / 2.0f);
-
-                    // 3. RESOLUÇÃO DE VELOCIDADE (Colisão Elástica/Inelástica)
-                    // Este algoritmo assume que as massas são as mesmas (Massa = BALL_MASS)
-                    // Para massas diferentes, a fórmula é mais complexa.
-
-                    // Vetor normal da colisão (do centro de B para o centro de A)
-                    glm::vec3 normal_collision_vector = glm::normalize(distance_vector);
-
-                    // Vetor de velocidade relativa (A em relação a B)
-                    glm::vec3 relative_velocity = ball_A.velocity - ball_B.velocity;
-
-                    // Componente da velocidade relativa ao longo da normal de colisão
-                    float velocity_along_normal = glm::dot(relative_velocity, normal_collision_vector);
-
-                    // Se as bolas já estão se separando, ou não se movendo para colidir, não há nova colisão a resolver.
-                    if (velocity_along_normal > 0)
-                        continue; 
-
-                    // Impulso (magnitude)
-                    // Fórmula para colisão elástica entre esferas com massas iguais
-                    // Multiplicamos por (1.0f + RESTITUTION_COEFF) para permitir perda de energia
-                    float impulse_magnitude = (-(1.0f + RESTITUTION_COEFF) * velocity_along_normal) / (2.0f); 
-
-                    // Vetor de impulso (na direção da normal)
-                    glm::vec3 impulse = impulse_magnitude * normal_collision_vector;
-
-                    // Aplica o impulso às velocidades de ambas as bolas
-                    ball_A.velocity += impulse;
-                    ball_B.velocity -= impulse; 
-                }
-            }
-
-            // TESTE COLISAO BOLA E ENTRADA DA CACAPA
-            for (const auto& segment : g_PocketEntrySegments) 
-            {
-                glm::vec2 segment_vec = glm::vec2(segment.p2.x - segment.p1.x, segment.p2.z - segment.p1.z);
-                glm::vec2 ball_to_p1_vec = glm::vec2(ball_A.position.x - segment.p1.x, ball_A.position.z - segment.p1.z); 
-
-                float t = glm::dot(ball_to_p1_vec, segment_vec) / glm::dot(segment_vec, segment_vec);
-                t = glm::clamp(t, 0.0f, 1.0f);
-
-                glm::vec2 closest_point_on_segment = glm::vec2(segment.p1.x, segment.p1.z) + t * segment_vec;
-
-                glm::vec2 normal_vec_2d = glm::vec2(ball_A.position.x, ball_A.position.z) - closest_point_on_segment;
-
-                float distance = glm::length(normal_vec_2d);
-
-                if (distance < ball_A.radius) // Colisão se distância < raio
-                {
-                    glm::vec2 collision_normal_2d = glm::normalize(normal_vec_2d);
-                    float penetration_depth = ball_A.radius - distance;
-                    ball_A.position.x += collision_normal_2d.x * penetration_depth;
-                    ball_A.position.z += collision_normal_2d.y * penetration_depth; 
-
-                    glm::vec2 velocity_2d = glm::vec2(ball_A.velocity.x, ball_A.velocity.z);
-                    float dot_product = glm::dot(velocity_2d, collision_normal_2d);
-
-                    if (dot_product < 0) // Se movendo contra a parede
-                    {
-                        glm::vec2 reflected_velocity_2d = velocity_2d - (2.0f * dot_product * collision_normal_2d);
-                        reflected_velocity_2d *= RESTITUTION_COEFF;
-
-                        ball_A.velocity.x = reflected_velocity_2d.x;
-                        ball_A.velocity.z = reflected_velocity_2d.y; 
-                    }
-                }
-            }
-
-            //TESTE DE COLISÃO COM AS TABELAS 
-            for (const auto& segment : g_TableSegments)
-            {
-                
-                glm::vec2 segment_vec = glm::vec2(segment.p2.x - segment.p1.x, segment.p2.z - segment.p1.z);
-                glm::vec2 ball_to_p1_vec = glm::vec2(ball_A.position.x - segment.p1.x, ball_A.position.z - segment.p1.z);
-                float t = glm::dot(ball_to_p1_vec, segment_vec) / glm::dot(segment_vec, segment_vec);
-                t = glm::clamp(t, 0.0f, 1.0f);
-                glm::vec2 closest_point_on_segment = glm::vec2(segment.p1.x, segment.p1.z) + t * segment_vec;
-                glm::vec2 normal_vec_2d = glm::vec2(ball_A.position.x, ball_A.position.z) - closest_point_on_segment;
-                float distance = glm::length(normal_vec_2d);
-
-                if (distance < ball_A.radius)
-                {
-                    glm::vec2 collision_normal_2d = glm::normalize(normal_vec_2d);
-                    float penetration_depth = ball_A.radius - distance;
-                    ball_A.position.x += collision_normal_2d.x * penetration_depth;
-                    ball_A.position.z += collision_normal_2d.y * penetration_depth;
-
-                    glm::vec2 velocity_2d = glm::vec2(ball_A.velocity.x, ball_A.velocity.z);
-                    float dot_product = glm::dot(velocity_2d, collision_normal_2d);
-
-                    if (dot_product < 0)
-                    {
-                        glm::vec2 reflected_velocity_2d = velocity_2d - (2.0f * dot_product * collision_normal_2d);
-                        reflected_velocity_2d *= RESTITUTION_COEFF;
-                        ball_A.velocity.x = reflected_velocity_2d.x;
-                        ball_A.velocity.z = reflected_velocity_2d.y;
-                    }
-                }
-            }
-            
-            // === TESTE DE COLISÃO BOLA-CAÇAPA (esferas) ===
-            for (const auto& pocket : g_Pockets)
-            {
-                float distance = glm::length(ball_A.position - pocket.position);
-                if (distance <= (ball_A.radius + pocket.radius))
-                {
-                    // Se a bola que caiu é a bola branca (texture_unit_index == 0)
-                    if (ball_A.texture_unit_index == 0) // <<=== VERIFICA SE É A BOLA BRANCA
-                    {
-                        g_CueBallPositioningMode = true; // Entra no modo de posicionamento
-                        // Coloca a bola branca em uma posição inicial para reposicionamento
-                        // Exemplo: no centro da linha de base (head string)
-                        ball_A.position = glm::vec3(-0.0020f, BALL_Y_AXIS, 0.5680f); // Posição de reposicionamento
-                        ball_A.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Zera a velocidade
-                        // A bola branca permanece ativa, mas seu movimento será manual
-                        fprintf(stdout, "DEBUG: Bola branca encacapada! Entrando no modo de posicionamento.\n");
-                    }
-                    else // Se for qualquer outra bola (não a branca)
-                    {
-                        ball_A.active = false; // Desativa a bola
-                        ball_A.position = glm::vec3(1000.0f, 1000.0f, 1000.0f); // Move para longe da cena
-                        ball_A.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Zera a velocidade
-                        fprintf(stdout, "DEBUG: Bola encacapada! Pos: (%.4f, %.4f, %.4f)\n", ball_A.position.x, ball_A.position.y, ball_A.position.z);
-                    }
-                    fflush(stdout);
-                    break; // A bola já caiu, não precisa testar outras caçapas para esta bola.
-                }
-            }
-        
-        
-        
-        }
 
         glm::vec4 camera_position_c;  // Ponto "c", centro da câmera
         glm::vec4 camera_lookat_l;    // Ponto "l", para onde a câmera (look-at) estará sempre olhando
@@ -890,7 +917,7 @@ int main(int argc, char* argv[])
               // Calcula o vetor "right" (para a direita da câmera)
             glm::vec4 global_up = glm::vec4(0.0f,1.0f,0.0f,0.0f);
             glm::vec4 right_dir = glm::normalize(glm::vec4(glm::cross(glm::vec3(forward_dir), glm::vec3(global_up)), 0.0f));
-            
+
 
             // O ponto para onde a câmera "olha" é sua posição atual mais um pouco à frente
             camera_lookat_l = camera_position_c + forward_dir * 1.0f; // Olhe 1 unidade à frente
@@ -928,14 +955,14 @@ int main(int argc, char* argv[])
                 // Fallback: Se a bola branca não existir ou estiver inativa, olhe para a origem.
                 camera_lookat_l = glm::vec4(0.0f,0.0f,0.0f,1.0f);
             }
-            
+
             // Calculamos a posição da câmera utilizando coordenadas esféricas,
             // AGORA RELATIVAS ao ponto camera_lookat_l.
             float r = g_CameraDistance;
             float y_rel = r*sin(g_CameraPhi); // Posição Y relativa ao alvo
             float z_rel = r*cos(g_CameraPhi)*cos(g_CameraTheta); // Posição Z relativa ao alvo
             float x_rel = r*cos(g_CameraPhi)*sin(g_CameraTheta); // Posição X relativa ao alvo
-            
+
             // A posição final da câmera é a posição do alvo MAIS a posição relativa.
             camera_position_c = camera_lookat_l + glm::vec4(x_rel, y_rel, z_rel, 0.0f); // <<=== MUDANÇA CRUCIAL AQUI
 
@@ -982,11 +1009,6 @@ int main(int argc, char* argv[])
             //     camera_position_c.x, camera_position_c.y, camera_position_c.z);
          }
 
-
-
-
-
-
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
         glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
@@ -1019,7 +1041,6 @@ int main(int argc, char* argv[])
             float l = -r;
             projection = Matrix_Orthographic(l, r, b, t, nearplane, farplane);
         }
-
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
 
         // Enviamos as matrizes "view" e "projection" para a placa de vídeo
@@ -1058,10 +1079,8 @@ int main(int argc, char* argv[])
             DrawVirtualObject(g_DebugBall.object_name.c_str());
         }
 
-       
-    
         // === DESENHAMOS TODAS AS BOLAS ===
-        for (const auto& ball : g_Balls) // <<=== LOOP SOBRE TODAS AS BOLAS
+        for (const auto& ball : g_Balls) 
         {
 
             if (!ball.active) continue; // Só desenha se a bola estiver ativa
@@ -1090,14 +1109,14 @@ int main(int argc, char* argv[])
             glUniform1i(g_texture_index_uniform, ball.texture_unit_index);
             DrawVirtualObject(ball.object_name.c_str());
         }
-    
+
         // === DESENHAR LINHA GUIA DE MIRA (se o modo de mira estiver ativo) ===
         if (g_AimingMode)
         {
             if (!g_Balls.empty() && g_Balls[0].active)
             {
                 glm::vec3 cue_ball_pos = g_Balls[0].position; // Centro da bola branca
-                
+
                 // Direção da mira no plano XZ (normalizado)
                 glm::vec3 aim_direction_xz = glm::normalize(glm::vec3(glm::sin(g_AimingAngle), 0.0f, glm::cos(g_AimingAngle)));
                 // Vetor perpendicular à direção da mira no plano XZ, para definir a largura do plano
@@ -1136,7 +1155,7 @@ int main(int argc, char* argv[])
 
                 // Remova glLineWidth() aqui, pois não é mais necessário
                 // glLineWidth(3.0f);
-                // glLineWidth(1.0f); 
+                // glLineWidth(1.0f);
 
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); // Desliga o EBO
                 glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -1692,7 +1711,7 @@ GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id)
         fprintf(stderr, "%s", output.c_str());
     }
 
-    // Os "Shader Objects" podem ser marcados para deleção após serem linkados 
+    // Os "Shader Objects" podem ser marcados para deleção após serem linkados
     glDeleteShader(vertex_shader_id);
     glDeleteShader(fragment_shader_id);
 
@@ -1836,13 +1855,11 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
     g_LastCursorPosY = ypos;
 }
 
-
-
 // Função callback chamada sempre que o usuário movimenta a "rodinha" do mouse.
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
     // Se o modo de câmera livre estiver DESATIVADO, o scroll controla a distância da câmera normal.
-    if (g_CameraMode == LOOKAT_WHITE_BALL) 
+    if (g_CameraMode == LOOKAT_WHITE_BALL)
     {
         // Usamos a variável yoffset para simular um zoom da câmera.
         g_CameraDistance -= yoffset;
@@ -1853,7 +1870,7 @@ void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 
         // Limita a distância da câmera para o zoom out máximo.
         if (g_CameraDistance > MAX_CAMERA_DISTANCE)
-            g_CameraDistance = MAX_CAMERA_DISTANCE;    
+            g_CameraDistance = MAX_CAMERA_DISTANCE;
         }
 
     // Se g_FreeLookMode for true, o scroll não fará nada (ou você poderia adicionar
@@ -1877,7 +1894,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     {
         glfwSetWindowShouldClose(window, GL_TRUE);
-    }   
+    }
 
     // === CONTROLE DA BOLA BRANCA NO MODO DE POSICIONAMENTO ===
     if (g_CueBallPositioningMode)
@@ -1910,7 +1927,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     }
 
 
-    /*/ === CONTROLE MANUAL FIXO DA BOLA DE DEPURACAO (g_DebugBall) 
+    /*/ === CONTROLE MANUAL FIXO DA BOLA DE DEPURACAO (g_DebugBall)
     // (Apenas quando a tecla é pressionada ou repetida)
     if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
@@ -1929,18 +1946,18 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         if (key == GLFW_KEY_RIGHT) { // Seta para a direita
             g_DebugBall.position.x += g_BallStepSize;
             fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
-        
+
         }
         if (key == GLFW_KEY_UP) { // Seta para cima
             g_DebugBall.position.z -= g_BallStepSize;
             fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
-        
+
         }
 
         if (key == GLFW_KEY_DOWN) { // Seta para baixo
             g_DebugBall.position.z += g_BallStepSize;
             fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
-        
+
         }
 
         if (key == GLFW_KEY_PAGE_UP) { // Seta para baixo
@@ -1951,14 +1968,14 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         if (key == GLFW_KEY_PAGE_DOWN) { // Seta para baixo
             g_DebugBall.position.y += g_BallStepSize;
             fprintf(stdout, "DEBUG: posicao atual (%.4f, %.4f, %.4f)\n", g_DebugBall.position.x, g_DebugBall.position.y, g_DebugBall.position.z);
-        }    
+        }
         if (key == GLFW_KEY_2)
         {
             g_DebugBall.radius += 0.1;
             fprintf(stdout, "DEBUG: RAIO ATUAL (%.4f,)\n", g_DebugBall.radius);
-        
+
         }
-         
+
         if (key == GLFW_KEY_1)
         {
             g_DebugBall.radius -= 0.1;
@@ -2001,7 +2018,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         }
         fflush(stdout);
     }
-    
+
     if (key == GLFW_KEY_P && action == GLFW_RELEASE)
     {
         if (g_P_KeyHeld) // Só dispara se 'P' estava de fato sendo pressionada
@@ -2081,7 +2098,8 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             // 1. SALVAR O ESTADO ATUAL DA CÂMERA FIXA (para restaurar ao sair)
             g_FixedCamRestoreDistance = g_CameraDistance;
             g_FixedCamRestorePhi      = g_CameraPhi;
-            g_FixedCamRestoreTheta    = g_CameraTheta;
+            g_FixedCamRestoreTheta    = g_CameraTheta;  
+            g_AimingAngle = g_CameraTheta + M_PI; // Garante que a mira comece alinhada com a câmera
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
             // 2. Captura a posição atual da câmera do modo FIXO (coordenadas cartesianas).
@@ -2111,7 +2129,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             //fprintf(stdout, "DEBUG: Modo Câmera Livre ATIVADO. Pos: (%.2f,%.2f,%.2f). Ângulos ajustados: Phi=%.2f, Theta=%.2f\n",
               //      g_FreeCameraPosition.x, g_FreeCameraPosition.y, g_FreeCameraPosition.z, g_CameraPhi, g_CameraTheta);
 
-    
+
         }
         else if (g_CameraMode == LOOKAT_WHITE_BALL) //GORA: Estamos no modo FIXO (acabamos de desativar)
         {
@@ -2120,7 +2138,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
             g_CameraDistance = g_FixedCamRestoreDistance;
             g_CameraPhi      = g_FixedCamRestorePhi;
             g_CameraTheta    = g_FixedCamRestoreTheta;
-            
+
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             //fprintf(stdout, "DEBUG: Modo Câmera Livre DESATIVADO. Restaurado para: (D=%.2f, P=%.2f, T=%.2f)\n",
               //      g_CameraDistance, g_CameraPhi, g_CameraTheta);
@@ -2313,11 +2331,11 @@ void TextRendering_ShowShotPower(GLFWwindow* window)
     // A porcentagem de força (g_CurrentShotPowerPercentage) é atualizada a cada frame
     // no loop principal (onde g_P_KeyHeld é true). Aqui, apenas formatamos e imprimimos.
     numchars = snprintf(buffer, 50, "FORCA: %.1f%%", g_CurrentShotPowerPercentage);
-    
+
     // Posicionamento na tela usando coordenadas NDC (Normalized Device Coordinates).
     // lineheight e charwidth são usados para um posicionamento responsivo.
     float lineheight = TextRendering_LineHeight(window);
-    float charwidth = TextRendering_CharWidth(window); 
+    float charwidth = TextRendering_CharWidth(window);
 
     // Posicionamos no canto inferior esquerdo ou onde preferir.
     // Exemplo: 0.5f para mais à direita, -0.8f para perto do fundo.
@@ -2350,7 +2368,7 @@ void TextRendering_ShowFramesPerSecond(GLFWwindow* window)
     if ( ellapsed_seconds > 1.0f )
     {
         numchars = snprintf(buffer, 20, "%.2f fps", ellapsed_frames / ellapsed_seconds);
-    
+
         old_seconds = seconds;
         ellapsed_frames = 0;
     }
@@ -2376,7 +2394,7 @@ void PrintObjModelInfo(ObjModel* model, bool showAllInfo)
   printf("# of shapes    : %d\n", (int)shapes.size());
   printf("# of materials : %d\n", (int)materials.size());
 
-  
+
 
   if (showAllInfo){
     for (size_t v = 0; v < attrib.vertices.size() / 3; v++) {
@@ -2530,7 +2548,7 @@ void PrintObjModelInfo(ObjModel* model, bool showAllInfo)
         printf("  material.%s = %s\n", it->first.c_str(), it->second.c_str());
         }
         printf("\n");
-        
+
     }
   }
 }
