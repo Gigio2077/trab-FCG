@@ -72,10 +72,14 @@ As bolinhas colidem entre si, e caem na caçapa. Todas bolinhas são instanciada
 - Quando a bola branca cai, use as setas para posicioná-la e espaço/enter para definir.
 
 ## Utilizamos ferramentas de IA?
-Sim, utilizamos Grok e GPT para geração de código, e para rastrear erros.
+Sim, utilizamos Grok e GPT para geração de código, e para rastrear erros. 
+Análise crítica da utilidade das ferramentas:
+- **Pontos positivos** - é muito útil para refatorar o código, encontrar erros triviais, e encontrar rapidamente referências para erros mostrados no terminal e atacar diretamente o problema Também é muito útil para prototipar rapidamente as ideias e melhorá-las posteriormente.
+- **Pontos negativos** - É perigoso integrar o código gerado pelas ferramentas diretamente sem prestar atenção, pois pode quebrar a aplicação. As ferramentas também tem dificuldade em manter muitas funções e contexto "em mente" na hora de criar código, mas isso pode ser contornado com prompts mais específicos e explicando melhor qual a intenção de um trecho de código.
 
 ## Passos necessários para compilação e execução
 No linux:
 ```sh
 $ make run
 ```
+Se tiver o codeblocks disponível, faça **Open existing project >** então selecione o arquivo com extensão **.cbp**, que configura o projeto dentro do codeblocks. Então basta rodar **Build and Run**.
