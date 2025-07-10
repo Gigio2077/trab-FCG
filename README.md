@@ -4,6 +4,8 @@
 - Habilitado V-Sync (máquinas muito poderosas podem rodar a mais de 500fps, e afetando a jogabilidade)
 - Consertado o bug de atravessar paredes quando a bola é jogada com muita força
 
+👉 **Vídeo Gameplay**: https://youtu.be/nQDfge4hsT4
+
 ![alt text](https://github.com/Gigio2077/trab-FCG/blob/main/imagens_readme/menu_mesa.gif)
 
 ## Conceitos aplicados de computação gráfica
