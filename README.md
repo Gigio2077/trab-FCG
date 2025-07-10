@@ -1,4 +1,8 @@
-# Sinuca Simulator v 0.8
+# Sinuca Simulator v 1.0
+##Atualizações da versão 1.0
+- Melhor desempenho nos testes de colisões
+- Habilitado V-Sync (máquinas muito poderosas podem rodar a mais de 500fps, e afetando a jogabilidade)
+- Consertado o bug de atravessar paredes quando a bola é jogada com muita força
 
 ![alt text](https://github.com/Gigio2077/trab-FCG/blob/main/imagens_readme/menu_mesa.gif)
 
